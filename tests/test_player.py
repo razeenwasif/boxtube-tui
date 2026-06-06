@@ -65,8 +65,20 @@ def test_build_command_core(monkeypatch):
     assert cmd[-1] == "https://youtu.be/X"
     assert any(c.startswith("--ytdl-format=") for c in cmd)
     assert "--script-opts=ytdl_hook-ytdl_path=/opt/yt-dlp" in cmd
+    # JS-free clients forced so extraction works without a JS runtime
+    assert any("player_client=" in c and "android_vr" in c for c in cmd)
     # sw-fast profile is only for the text output
     assert "--profile=sw-fast" not in cmd
+
+
+def test_build_command_includes_cookies(monkeypatch):
+    monkeypatch.setattr(player, "find_ytdlp", lambda: "/opt/yt-dlp")
+    monkeypatch.setattr(player, "mpv_path", lambda: "/usr/bin/mpv")
+    cmd = player.build_command("url", vo="kitty", cookies="/ck.txt")
+    assert any(c == "--ytdl-raw-options-append=cookies=/ck.txt" for c in cmd)
+    # no cookies -> no cookies option
+    cmd2 = player.build_command("url", vo="kitty")
+    assert not any("cookies=" in c for c in cmd2)
 
 
 def test_build_command_tct_adds_swfast(monkeypatch):

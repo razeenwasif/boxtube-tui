@@ -55,8 +55,14 @@ def build_command(url: str, vo: str | None = None, cookies: str | None = None) -
         "--really-quiet",
         "--msg-level=all=error",
         # Cap resolution: terminal cells are coarse, lower res streams start
-        # faster and decode lighter while looking identical once rendered.
-        "--ytdl-format=bestvideo[height<=480]+bestaudio/best[height<=480]/best",
+        # faster and decode lighter while looking identical once rendered. The
+        # final, uncapped fallback guarantees *something* plays.
+        "--ytdl-format=bestvideo[height<=480]+bestaudio/best[height<=480]/bestvideo+bestaudio/best",
+        # Force JS-free YouTube clients. Recent yt-dlp needs a JS runtime for the
+        # default "web" client; without one it returns a degraded format set and
+        # mpv's ytdl hook fails with "Requested format is not available". The
+        # android_vr/tv clients need no JS and return full formats.
+        "--ytdl-raw-options-append=extractor-args=youtube:player_client=default,android_vr,tv",
     ]
 
     ytdl = find_ytdlp()

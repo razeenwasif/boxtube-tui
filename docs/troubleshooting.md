@@ -33,6 +33,33 @@ Confirm BoxTube is using the fresh copy (it prefers the venv one):
 
 See [configuration → yt-dlp resolution](configuration.md#yt-dlp-resolution).
 
+## Playback fails: "Requested format is not available"
+
+**Cause** — recent yt-dlp needs a JavaScript runtime for YouTube's default `web`
+client; without one it returns a degraded format set, and mpv's hook can't find a
+stream matching the resolution cap. BoxTube works around this by forcing the
+JS-free `android_vr`/`tv` clients (`--ytdl-raw-options-append=extractor-args=...`
+in `player.py`) and by ending the format chain with an uncapped fallback, so this
+should not happen.
+
+If you still hit it:
+
+- Update yt-dlp: `.venv/bin/pip install -U yt-dlp` (or `make update-ytdlp`).
+- Optionally install a JS runtime so the default client works too — yt-dlp
+  supports [deno](https://deno.com/); or point it at an existing runtime, e.g.
+  `node`/`bun`, with `--js-runtimes`.
+
+## "open in browser" does nothing / xdg-open errors (WSL)
+
+On WSL there's often no Linux browser, so `xdg-open` fails with a list of
+"not found" lines. BoxTube detects WSL and opens links via `wslview` (from the
+`wslu` package) or `cmd.exe start` instead. For the nicest experience install
+`wslu`:
+
+```bash
+sudo apt install wslu
+```
+
 ## "mpv is not installed"
 
 BoxTube can't find mpv on your `PATH`.

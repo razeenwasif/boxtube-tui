@@ -15,7 +15,7 @@ from textual.containers import Horizontal, VerticalScroll
 from textual.widgets import Footer, Input, Label, ListItem, ListView, Static
 from textual_image.widget import Image
 
-from . import account, player, thumbnails, youtube
+from . import account, opener, player, thumbnails, youtube
 from .youtube import Playlist, SearchError, Video
 
 # Left-nav items: (key, icon, label). All require sign-in.
@@ -363,10 +363,10 @@ class BoxTube(App[None]):
         if item is None:
             self.notify("Highlight a video first.", severity="warning")
             return
-        import webbrowser
-
-        webbrowser.open(item.video.watch_url)
-        self.notify(f"Opened {item.video.watch_url}")
+        if opener.open_url(item.video.watch_url):
+            self.notify(f"Opened {item.video.watch_url}")
+        else:
+            self.notify("Couldn't find a browser to open the link.", severity="error")
 
     def action_refresh(self) -> None:
         self._update_auth()

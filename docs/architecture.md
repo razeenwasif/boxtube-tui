@@ -37,6 +37,7 @@ persistent state beyond an in-memory thumbnail cache for the session.
 | `boxtube/account.py` | Sign-in state from a cookies file | `is_signed_in()`, `cookies_arg()`, `cookies_path()` |
 | `boxtube/thumbnails.py` | Download + cache thumbnails as PIL images | `fetch()`, `placeholder()` |
 | `boxtube/player.py` | Build & run the mpv command; choose a video output | `play()`, `build_command()`, `detect_vo()`, `mpv_path()` |
+| `boxtube/opener.py` | Open links in a browser (WSL-aware) | `open_url()`, `is_wsl()` |
 | `boxtube/boxtube.tcss` | Theme: colors, borders, layout | (Textual CSS) |
 | `boxtube/__main__.py` | `python -m boxtube` entry | delegates to `app.main` |
 

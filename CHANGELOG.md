@@ -30,6 +30,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `youtube.search()` and `player.play()` now accept an optional `cookies`
   argument; feed loaders share one internal yt-dlp runner.
 
+### Fixed
+- Playback no longer fails with "Requested format is not available" on videos
+  where YouTube's `web` client returns a degraded format set without a JS
+  runtime: BoxTube now forces the JS-free `android_vr`/`tv` clients and ends the
+  format chain with an uncapped fallback.
+- "Open in browser" (`o`) now works on WSL, routing to the Windows browser via
+  `wslview` or `cmd.exe start` instead of failing through `xdg-open`
+  (new `boxtube/opener.py`).
+
 ## [0.1.0] - 2026-06-06
 
 ### Added
