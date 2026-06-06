@@ -55,6 +55,24 @@ sudo apt install mpv    # Debian/Ubuntu — or `brew install mpv`, etc.
   .venv/bin/python -c "from boxtube import thumbnails; print(thumbnails.fetch('dQw4w9WgXcQ','https://i.ytimg.com/vi/dQw4w9WgXcQ/mqdefault.jpg').size)"
   ```
 
+## Personalized tabs are empty or fail (History, Liked, etc.)
+
+The Library tabs need a valid YouTube cookies file.
+
+- **Still shows "Sign in required"** — BoxTube can't find a non-empty cookies file.
+  Check the path:
+
+  ```bash
+  .venv/bin/python -c "from boxtube import account; print(account.cookies_path(), account.is_signed_in())"
+  ```
+
+  Put your exported `cookies.txt` there (or set `BOXTUBE_COOKIES`), then press `r`.
+- **Was working, now errors** — cookies expire. Re-export `cookies.txt` from your
+  browser and overwrite the file. See the [accounts guide](accounts.md).
+- **A tab loads but is empty** — that list may genuinely be empty (e.g. no Watch
+  Later items), or your account region/settings hide it. Try another tab to
+  confirm sign-in works.
+
 ## Video is blocky / low quality
 
 You're on the `tct` (truecolor text) output, the universal fallback. This is

@@ -8,6 +8,22 @@ knobs that exist are documented here.
 | Variable | Values | Default | Effect |
 |----------|--------|---------|--------|
 | `BOXTUBE_VO` | `kitty`, `sixel`, `tct`, or any valid mpv `--vo` | auto-detected | Forces the mpv video output used for playback |
+| `BOXTUBE_COOKIES` | Path to a cookies.txt | `~/.config/boxtube/cookies.txt` | Where BoxTube reads your YouTube cookies for personalized feeds |
+| `XDG_CONFIG_HOME` | Path | `~/.config` | Base dir for the default cookies path |
+
+### Sign-in / cookies (`BOXTUBE_COOKIES`)
+
+Personalized tabs (Home, History, Liked, Watch Later, Playlists) read a
+browser-exported cookies file. By default that's
+`~/.config/boxtube/cookies.txt`; point `BOXTUBE_COOKIES` elsewhere to use a
+different file:
+
+```bash
+BOXTUBE_COOKIES=/secure/yt-cookies.txt boxtube
+```
+
+See the [accounts guide](accounts.md) for how to export the file. Search works
+without it.
 
 ### Video output (`BOXTUBE_VO`)
 

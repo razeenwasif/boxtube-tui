@@ -12,12 +12,15 @@ import pytest
 
 from boxtube import youtube
 from boxtube.youtube import (
+    Playlist,
     SearchError,
     Video,
     find_ytdlp,
     human_duration,
     human_number,
     search,
+    user_playlists,
+    videos_for_feed,
 )
 
 
@@ -162,6 +165,79 @@ def test_search_builds_expected_command(monkeypatch):
     assert captured["cmd"][1] == "ytsearch7:cats"
     assert "--flat-playlist" in captured["cmd"]
     assert "--dump-json" in captured["cmd"]
+
+
+# ----- Playlist model ----------------------------------------------------
+
+
+def test_playlist_model():
+    p = Playlist(id="PL123", title="My mix", count=12)
+    assert p.url == "https://www.youtube.com/playlist?list=PL123"
+    assert p.count_str == "12 videos"
+    assert Playlist(id="PL", title="t").count_str == "playlist"
+
+
+# ----- feeds & dispatch (mocked subprocess) ------------------------------
+
+
+def test_entries_passes_cookies_and_limit(monkeypatch):
+    monkeypatch.setattr(youtube, "find_ytdlp", lambda: "/usr/bin/yt-dlp")
+    captured = {}
+
+    def _capture(cmd, capture_output=True, text=True):
+        captured["cmd"] = cmd
+        return SimpleNamespace(stdout='{"id":"vvvvvvvvvvv","title":"t"}', stderr="", returncode=0)
+
+    monkeypatch.setattr(youtube.subprocess, "run", _capture)
+    youtube.liked_videos(limit=9, cookies="/path/ck.txt")
+    cmd = captured["cmd"]
+    assert "--cookies" in cmd and "/path/ck.txt" in cmd
+    assert "--playlist-end" in cmd and "9" in cmd
+    assert youtube.PLAYLIST_LIKED in cmd
+
+
+def test_videos_for_feed_dispatch(monkeypatch):
+    sentinel = [Video(id="x", title="t", channel="c", duration=1, views=1)]
+    monkeypatch.setattr(youtube, "subscriptions_feed", lambda limit, cookies: sentinel)
+    monkeypatch.setattr(youtube, "watch_history", lambda limit, cookies: sentinel)
+    monkeypatch.setattr(youtube, "liked_videos", lambda limit, cookies: sentinel)
+    monkeypatch.setattr(youtube, "watch_later", lambda limit, cookies: sentinel)
+
+    for key in ("home", "subscriptions", "history", "liked", "watch_later"):
+        assert videos_for_feed(key, limit=5, cookies=None) is sentinel
+
+    with pytest.raises(ValueError):
+        videos_for_feed("bogus", limit=5, cookies=None)
+
+
+def test_user_playlists_parsing(monkeypatch):
+    monkeypatch.setattr(youtube, "find_ytdlp", lambda: "/usr/bin/yt-dlp")
+    lines = "\n".join(
+        json.dumps(d)
+        for d in [
+            {"id": "PLaaa", "ie_key": "YoutubeTab", "title": "Mix A",
+             "url": "https://www.youtube.com/playlist?list=PLaaa", "playlist_count": 4},
+            {"id": "vvvvvvvvvvv", "ie_key": "Youtube", "title": "a video"},  # not a playlist
+        ]
+    )
+    monkeypatch.setattr(youtube.subprocess, "run", _fake_run_factory(lines))
+    playlists = user_playlists(cookies="/ck")
+    assert [p.id for p in playlists] == ["PLaaa"]
+    assert playlists[0].count == 4
+
+
+def test_feed_separates_videos_from_playlists(monkeypatch):
+    monkeypatch.setattr(youtube, "find_ytdlp", lambda: "/usr/bin/yt-dlp")
+    lines = "\n".join(
+        json.dumps(d)
+        for d in [
+            {"id": "vvvvvvvvvvv", "ie_key": "Youtube", "title": "Real video", "view_count": 10},
+            {"id": "PLxxx", "ie_key": "YoutubeTab", "title": "A playlist row"},
+        ]
+    )
+    monkeypatch.setattr(youtube.subprocess, "run", _fake_run_factory(lines))
+    videos = youtube.subscriptions_feed(cookies="/ck")
+    assert [v.id for v in videos] == ["vvvvvvvvvvv"]
 
 
 # ----- network (manual) --------------------------------------------------

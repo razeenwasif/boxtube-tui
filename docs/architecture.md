@@ -32,15 +32,40 @@ persistent state beyond an in-memory thumbnail cache for the session.
 
 | Module | Responsibility | Key surface |
 |--------|----------------|-------------|
-| `boxtube/app.py` | Textual UI, layout, event handling, orchestration | `BoxTube(App)`, `VideoItem(ListItem)`, `main()` |
-| `boxtube/youtube.py` | Search via `yt-dlp`; locate the `yt-dlp` binary; data model & formatting | `search()`, `Video`, `find_ytdlp()`, `human_*()` |
+| `boxtube/app.py` | Textual UI, layout, nav, events, orchestration | `BoxTube(App)`, `NavItem`/`VideoItem`/`PlaylistItem`, `main()` |
+| `boxtube/youtube.py` | Search & personalized feeds via `yt-dlp`; binary discovery; models & formatting | `search()`, `videos_for_feed()`, `user_playlists()`, `Video`, `Playlist`, `find_ytdlp()` |
+| `boxtube/account.py` | Sign-in state from a cookies file | `is_signed_in()`, `cookies_arg()`, `cookies_path()` |
 | `boxtube/thumbnails.py` | Download + cache thumbnails as PIL images | `fetch()`, `placeholder()` |
 | `boxtube/player.py` | Build & run the mpv command; choose a video output | `play()`, `build_command()`, `detect_vo()`, `mpv_path()` |
 | `boxtube/boxtube.tcss` | Theme: colors, borders, layout | (Textual CSS) |
 | `boxtube/__main__.py` | `python -m boxtube` entry | delegates to `app.main` |
 
-The dependency direction is acyclic: `app` → {`youtube`, `thumbnails`, `player`},
-and `player` → `youtube` (for `find_ytdlp`). Nothing imports `app`.
+The dependency direction is acyclic: `app` → {`youtube`, `account`, `thumbnails`,
+`player`}, and `player` → `youtube` (for `find_ytdlp`). Nothing imports `app`.
+
+## Navigation & data sources
+
+The left nav (`NAV_ITEMS` in `app.py`) maps each tab to a yt-dlp target:
+
+| Tab | Loader | yt-dlp target | Auth |
+|-----|--------|---------------|------|
+| Home | `youtube.subscriptions_feed` | `/feed/subscriptions` | cookies |
+| History | `youtube.watch_history` | `/feed/history` | cookies |
+| Liked | `youtube.liked_videos` | `playlist?list=LL` | cookies |
+| Watch Later | `youtube.watch_later` | `playlist?list=WL` | cookies |
+| Playlists | `youtube.user_playlists` → `playlist_videos` | `/feed/playlists` → `playlist?list=<id>` | cookies |
+| Search (top bar) | `youtube.search` | `ytsearchN:<query>` | none |
+
+All feed loaders funnel through one internal runner, `youtube._entries(target,
+limit, cookies)`, which runs `yt-dlp --flat-playlist --dump-json` (adding
+`--cookies` and `--playlist-end` as needed) and parses the JSON lines. Helpers
+split the results into `Video`s and `Playlist`s (`_is_video_entry` /
+`_is_playlist_entry`), so a feed that mixes both is handled correctly.
+
+**Sign-in** is just the presence of a non-empty cookies file (`account`). Opening
+an auth tab while signed out renders in-app sign-in steps instead of calling
+yt-dlp. **Playlists** is a two-level view: the list of playlists, then a selected
+playlist's videos (`Backspace` returns), tracked by `self._drill_playlist`.
 
 ## UI composition
 

@@ -8,11 +8,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **YouTube-like layout**: a three-pane UI with a left Library nav (Home,
+  History, Liked, Watch Later, Playlists), results list, and preview pane.
+- **Sign-in via a cookies file** (`boxtube/account.py`): browse your
+  subscriptions feed, watch history, liked videos, watch later, and playlists.
+  Cookies are read from `~/.config/boxtube/cookies.txt` (override with
+  `BOXTUBE_COOKIES`). In-app sign-in instructions (`?`) and a status indicator.
+- **Playlists drill-down**: open a playlist to view its videos; `Backspace` to go
+  back.
+- New keybindings: `1`–`5` (jump to tab), `r` (refresh), `?` (sign-in help),
+  `Backspace` (back).
+- Cookies are passed to mpv during playback so age-restricted/private videos play.
+- `docs/accounts.md` sign-in guide; `tests/test_account.py`; expanded tests.
 - Comprehensive documentation set under `docs/` (installation, usage,
   configuration, architecture, troubleshooting, development).
 - Project meta files: `LICENSE`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`,
   `SECURITY.md`, `CHANGELOG.md`.
 - `Makefile` with common developer tasks and a `tests/` suite.
+
+### Changed
+- `youtube.search()` and `player.play()` now accept an optional `cookies`
+  argument; feed loaders share one internal yt-dlp runner.
 
 ## [0.1.0] - 2026-06-06
 

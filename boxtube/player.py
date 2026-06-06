@@ -46,7 +46,7 @@ def mpv_path() -> str | None:
     return shutil.which("mpv")
 
 
-def build_command(url: str, vo: str | None = None) -> list[str]:
+def build_command(url: str, vo: str | None = None, cookies: str | None = None) -> list[str]:
     vo = vo or detect_vo()
     mpv = mpv_path() or "mpv"
     cmd = [
@@ -63,6 +63,10 @@ def build_command(url: str, vo: str | None = None) -> list[str]:
     if ytdl:
         cmd.append(f"--script-opts=ytdl_hook-ytdl_path={ytdl}")
 
+    # Pass cookies to yt-dlp's hook so private / age-restricted videos play.
+    if cookies:
+        cmd.append(f"--ytdl-raw-options-append=cookies={cookies}")
+
     if vo == "tct":
         # Software scaling profile keeps text-mode playback smooth.
         cmd.append("--profile=sw-fast")
@@ -71,7 +75,7 @@ def build_command(url: str, vo: str | None = None) -> list[str]:
     return cmd
 
 
-def play(url: str, vo: str | None = None) -> int:
+def play(url: str, vo: str | None = None, cookies: str | None = None) -> int:
     """Play ``url`` in the terminal, blocking until mpv exits.
 
     Returns mpv's exit code. The caller is responsible for suspending any TUI
@@ -79,5 +83,5 @@ def play(url: str, vo: str | None = None) -> int:
     """
     if mpv_path() is None:
         raise FileNotFoundError("mpv is not installed or not on PATH.")
-    proc = subprocess.run(build_command(url, vo))
+    proc = subprocess.run(build_command(url, vo, cookies))
     return proc.returncode

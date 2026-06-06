@@ -7,24 +7,25 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Built with Textual](https://img.shields.io/badge/built%20with-Textual-ff6b6b)](https://textual.textualize.io/)
 
-BoxTube is a TUI (terminal user interface) YouTube client. Search YouTube, browse
-results with **inline thumbnail previews**, and **watch videos rendered directly
-inside the terminal** via [mpv](https://mpv.io/) — using your terminal's native
-graphics protocol when available. No API key required.
+BoxTube is a TUI (terminal user interface) YouTube client with a YouTube-like
+layout. Search YouTube, **sign in to browse your subscriptions feed, history,
+liked videos, watch later, and playlists**, see **inline thumbnail previews**, and
+**watch videos rendered directly inside the terminal** via [mpv](https://mpv.io/) —
+using your terminal's native graphics protocol when available. No API key required.
 
 ```
-●  BoxTube                                              press / to search
-╭─ Search ─────────────────────────────────────────────────────────────╮
-│ lofi hip hop                                                          │
-╰──────────────────────────────────────────────────────────────────────╯
-╭─ Results (25) ───────────────╮╭─ Preview ───────────────────────────╮
-│▌Best of lofi hip hop 2021    ││         ░▒▓ thumbnail ▓▒░           │
-│ Lofi Girl   6:10:58  55.2M   ││                                     │
-│ lofi hip hop radio 📚         ││ Best of lofi hip hop 2021           │
-│ Lofi Girl   —  —             ││ Channel   Lofi Girl                 │
-│ …                            ││ Length    6:10:58                   │
-╰──────────────────────────────╯╰─────────────────────────────────────╯
- / Search   Enter Play   o Open in browser                    ^q Quit
+●  BoxTube                                               ● Signed in
+╭─ Search ──────────────────────────────────────────────────────────────╮
+│ lofi hip hop                                                           │
+╰───────────────────────────────────────────────────────────────────────╯
+╭─ Library ──╮╭─ Home — Subscriptions (3) ──╮╭─ Preview ────────────────╮
+│▌🏠 Home    ││▌Never Gonna Give You Up     ││      ░▒▓ thumbnail ▓▒░   │
+│ 🕘 History ││ Rick Astley   3:33  1.6B    ││                          │
+│ 👍 Liked   ││ lofi hip hop radio          ││ Never Gonna Give You Up  │
+│ ⏰ Later   ││ Lofi Girl   —  55.2M        ││ Channel  Rick Astley     │
+│ 🎵 Playlist││ …                           ││ Length   3:33            │
+╰────────────╯╰─────────────────────────────╯╰──────────────────────────╯
+ / Search   Enter Play   o Open   r Refresh   ? Sign in          ^q Quit
 ```
 
 ---
@@ -42,13 +43,18 @@ graphics protocol when available. No API key required.
 
 ## Features
 
+- **YouTube-like layout** — a left Library nav (Home, History, Liked, Watch Later,
+  Playlists), a results list, and a preview pane.
+- **Sign in for your feed** — browse your subscriptions feed, watch history, liked
+  videos, watch later, and playlists. Auth is via a browser-exported cookies file
+  (no passwords). See the [accounts guide](docs/accounts.md).
 - **In-terminal playback** — videos play inside the terminal via mpv, using the
   kitty graphics protocol, sixel, or a truecolor-text fallback depending on your
   terminal.
 - **Inline thumbnails** — the highlighted video's thumbnail renders in the
   preview pane, scaling with the window while preserving its 16:9 ratio.
-- **Real YouTube data** — powered by `yt-dlp`; no Google API key or account.
-- **Keyboard-first** — search, browse, and play without touching the mouse.
+- **Real YouTube data** — powered by `yt-dlp`; no Google API key required.
+- **Keyboard-first** — search, browse, switch tabs, and play without the mouse.
 - **Modern, refined UI** — a dark theme with a light-red (`#ff6b6b`) accent.
 - **Adaptive rendering** — automatically detects the best graphics mode for your
   terminal, with graceful fallbacks everywhere.
@@ -78,8 +84,9 @@ again to watch. See the [usage guide](docs/usage.md) for the full workflow.
 |-------------|-----|-------|
 | Python 3.10+ | Runtime | |
 | [mpv](https://mpv.io/) | In-terminal video playback | System package |
-| `yt-dlp` | Search + stream resolution | Installed into the venv via pip |
+| `yt-dlp` | Search + stream resolution + feeds | Installed into the venv via pip |
 | A 24-bit color terminal | Rendering | kitty / Ghostty / WezTerm give the sharpest thumbnails & video |
+| A YouTube cookies file | Personalized feeds (optional) | Export from your browser; see [accounts](docs/accounts.md). Search works without it |
 
 See the [installation guide](docs/installation.md) for platform-specific notes
 (WSL, Ghostty, kitty, sixel terminals).
@@ -91,6 +98,7 @@ Full documentation lives in [`docs/`](docs/):
 | Guide | Contents |
 |-------|----------|
 | [Installation](docs/installation.md) | Prerequisites, install, PATH setup, uninstall, platform notes |
+| [Accounts / sign-in](docs/accounts.md) | Exporting cookies, the cookies path, what each tab shows |
 | [Usage](docs/usage.md) | UI tour, keybindings, search & playback workflows |
 | [Configuration](docs/configuration.md) | Environment variables, video-output modes, tunables |
 | [Architecture](docs/architecture.md) | Components, data flow, threading model, design decisions |
@@ -105,8 +113,9 @@ Project meta: [Contributing](CONTRIBUTING.md) · [Code of Conduct](CODE_OF_CONDU
 ```
 BoxTube/
 ├── boxtube/                 # application package
-│   ├── app.py               # Textual UI + controller
-│   ├── youtube.py           # yt-dlp search + binary discovery
+│   ├── app.py               # Textual UI + controller (nav, feeds, drill-down)
+│   ├── youtube.py           # yt-dlp search/feeds + binary discovery
+│   ├── account.py           # sign-in state via a cookies file
 │   ├── thumbnails.py        # background thumbnail fetch + cache
 │   ├── player.py            # mpv in-terminal playback
 │   ├── boxtube.tcss         # theme (light-red accent)

@@ -20,10 +20,9 @@ Screen {
     color: #f2f2f4;
 }
 
-#brand-hint {
+#auth {
     width: auto;
     content-align: right middle;
-    color: #6f6f78;
 }
 
 /* ----- search ------------------------------------------------------ */
@@ -49,10 +48,42 @@ Screen {
     margin: 1 2 0 2;
 }
 
-#results {
-    width: 2fr;
+/* left Library nav */
+#nav {
+    width: 24;
     height: 1fr;
     padding: 0;
+    background: #121217;
+    border: round #ff6b6b;
+    border-title-color: #ff8a8a;
+    border-title-style: bold;
+    scrollbar-size-vertical: 1;
+    scrollbar-color: #34343d;
+}
+
+NavItem {
+    height: 1;
+    padding: 0 1;
+    color: #c8c8d0;
+    border-left: thick #121217;
+}
+
+ListView#nav > NavItem.-highlight {
+    background: #ff6b6b 12%;
+    border-left: thick #ff6b6b;
+}
+
+ListView#nav:focus > NavItem.-highlight {
+    background: #ff6b6b 22%;
+    color: #ffffff;
+}
+
+/* middle results */
+#results {
+    width: 3fr;
+    height: 1fr;
+    padding: 0;
+    margin: 0 0 0 2;
     background: #121217;
     border: round #ff6b6b;
     border-title-color: #ff8a8a;
@@ -62,8 +93,9 @@ Screen {
     scrollbar-size-vertical: 1;
 }
 
+/* right preview */
 #detail-pane {
-    width: 3fr;
+    width: 2fr;
     height: 1fr;
     margin-left: 2;
     padding: 1 2;
@@ -77,43 +109,41 @@ Screen {
 
 /* ----- result rows ------------------------------------------------- */
 
-VideoItem {
+VideoItem, PlaylistItem {
     height: auto;
     padding: 1 1 1 1;
     background: transparent;
     border-left: thick #121217;
 }
 
-VideoItem .title {
+VideoItem .title, PlaylistItem .title {
     text-style: bold;
     color: #d6d6da;
 }
 
-VideoItem .meta {
+VideoItem .meta, PlaylistItem .meta {
     color: #6f6f78;
 }
 
-/* highlighted row: soft red wash + a light-red accent bar, no layout shift */
-ListView > VideoItem.-highlight {
+ListView#results > VideoItem.-highlight,
+ListView#results > PlaylistItem.-highlight {
     background: #ff6b6b 10%;
     border-left: thick #ff6b6b;
 }
 
-ListView:focus > VideoItem.-highlight {
+ListView#results:focus > VideoItem.-highlight,
+ListView#results:focus > PlaylistItem.-highlight {
     background: #ff6b6b 18%;
 }
 
-ListView:focus > VideoItem.-highlight .title {
+ListView#results:focus > VideoItem.-highlight .title,
+ListView#results:focus > PlaylistItem.-highlight .title {
     color: #ffffff;
-}
-
-ListView:focus > VideoItem.-highlight .meta {
-    color: #c6a3a6;
 }
 
 /* ----- detail pane contents --------------------------------------- */
 
-/* Thumbnail: width is derived from height so the 16:9 frame never stretches,
+/* Thumbnail: width derived from height so the 16:9 frame never stretches,
    while the percentage height lets it grow/shrink with the window. */
 #thumb {
     width: auto;
