@@ -1,0 +1,150 @@
+/* BoxTube — modern, refined dark theme with a light-red accent (#ff6b6b) */
+
+Screen {
+    background: #0d0d10;
+    color: #e8e8ea;
+}
+
+/* ----- top bar ----------------------------------------------------- */
+
+#appbar {
+    dock: top;
+    height: 1;
+    background: #16161b;
+    padding: 0 2;
+}
+
+#brand {
+    width: 1fr;
+    content-align: left middle;
+    color: #f2f2f4;
+}
+
+#brand-hint {
+    width: auto;
+    content-align: right middle;
+    color: #6f6f78;
+}
+
+/* ----- search ------------------------------------------------------ */
+
+#search {
+    margin: 1 2 0 2;
+    height: 3;
+    background: #16161b;
+    border: round #34343d;
+    border-title-color: #6f6f78;
+    color: #e8e8ea;
+}
+
+#search:focus {
+    border: round #ff6b6b;
+    border-title-color: #ff8a8a;
+}
+
+/* ----- body split -------------------------------------------------- */
+
+#body {
+    height: 1fr;
+    margin: 1 2 0 2;
+}
+
+#results {
+    width: 2fr;
+    height: 1fr;
+    padding: 0;
+    background: #121217;
+    border: round #ff6b6b;
+    border-title-color: #ff8a8a;
+    border-title-style: bold;
+    scrollbar-color: #34343d;
+    scrollbar-color-hover: #ff6b6b;
+    scrollbar-size-vertical: 1;
+}
+
+#detail-pane {
+    width: 3fr;
+    height: 1fr;
+    margin-left: 2;
+    padding: 1 2;
+    background: #121217;
+    border: round #ff6b6b;
+    border-title-color: #ff8a8a;
+    border-title-style: bold;
+    scrollbar-size-vertical: 1;
+    scrollbar-color: #34343d;
+}
+
+/* ----- result rows ------------------------------------------------- */
+
+VideoItem {
+    height: auto;
+    padding: 1 1 1 1;
+    background: transparent;
+    border-left: thick #121217;
+}
+
+VideoItem .title {
+    text-style: bold;
+    color: #d6d6da;
+}
+
+VideoItem .meta {
+    color: #6f6f78;
+}
+
+/* highlighted row: soft red wash + a light-red accent bar, no layout shift */
+ListView > VideoItem.-highlight {
+    background: #ff6b6b 10%;
+    border-left: thick #ff6b6b;
+}
+
+ListView:focus > VideoItem.-highlight {
+    background: #ff6b6b 18%;
+}
+
+ListView:focus > VideoItem.-highlight .title {
+    color: #ffffff;
+}
+
+ListView:focus > VideoItem.-highlight .meta {
+    color: #c6a3a6;
+}
+
+/* ----- detail pane contents --------------------------------------- */
+
+/* Thumbnail: width is derived from height so the 16:9 frame never stretches,
+   while the percentage height lets it grow/shrink with the window. */
+#thumb {
+    width: auto;
+    height: 45%;
+    min-height: 7;
+    max-height: 22;
+    margin-bottom: 1;
+}
+
+#meta {
+    width: 1fr;
+    margin-bottom: 1;
+}
+
+#desc {
+    width: 1fr;
+}
+
+/* ----- footer ------------------------------------------------------ */
+
+Footer {
+    background: #16161b;
+    color: #8a8a94;
+}
+
+Footer > .footer--key {
+    background: #16161b;
+    color: #ff8a8a;
+    text-style: bold;
+}
+
+Footer > .footer--highlight {
+    background: #ff6b6b 20%;
+}
