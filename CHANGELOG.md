@@ -29,5 +29,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Bundled, up-to-date `yt-dlp` (resolved from the venv) so playback does not
   depend on a stale system binary.
 
-[Unreleased]: https://example.com/BoxTube/compare/v0.1.0...HEAD
-[0.1.0]: https://example.com/BoxTube/releases/tag/v0.1.0
+[Unreleased]: https://github.com/razeenwasif/boxtube-tui/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/razeenwasif/boxtube-tui/releases/tag/v0.1.0
