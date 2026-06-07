@@ -60,7 +60,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `BOXTUBE_PLAYER_FPS` and `BOXTUBE_PLAYER_HEIGHT`.
 - **Grid performance**: thumbnails now load lazily and visible-first — only cards
   on screen (plus a small buffer) are fetched/rendered, re-scanning as you scroll,
-  so a feed no longer loads every off-screen thumbnail up front.
+  so a feed no longer loads every off-screen thumbnail up front. Card thumbnails
+  are pre-resized off the UI thread for cheaper re-renders, and the scan trigger
+  is debounced so rapid scrolling doesn't restart the loader on every event.
 
 ### Fixed
 - Playback no longer silently fails when signed in. Sending cookies to mpv broke

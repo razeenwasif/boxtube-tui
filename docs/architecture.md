@@ -80,11 +80,15 @@ resize). Each card posts `CardSelected` on focus (→ update the preview) and
 
 Thumbnails load **lazily, visible-first**: one background worker fetches/renders
 only the cards whose region is on screen (plus a small buffer below the fold,
-computed in `_visible_unloaded_cards`), re-scanning as you scroll or navigate
-(triggered from grid moves and mouse scroll). Off-screen cards aren't fetched
-until revealed, so a 40-item feed loads ~a screenful up front instead of all 40.
-Loaded ids are tracked in `_thumbs_loaded`; results are cached
-(`thumbnails`' LRU).
+computed in `_visible_unloaded_cards`), re-scanning as you scroll or navigate.
+Off-screen cards aren't fetched until revealed, so a 40-item feed loads ~a
+screenful up front instead of all 40. Loaded ids are tracked in `_thumbs_loaded`;
+results are cached (`thumbnails`' LRU). Two further perf measures: the worker
+**pre-resizes** each card thumbnail to a small width (`thumbnails.for_card`) off
+the UI thread so re-renders are cheaper (the full image is kept for the larger
+preview), and the scroll/resize/move triggers are **debounced**
+(`_request_thumb_scan`, ~120 ms) so rapid scrolling doesn't restart the loader on
+every event.
 
 ## UI composition
 

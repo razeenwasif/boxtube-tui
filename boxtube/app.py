@@ -205,6 +205,7 @@ class BoxTube(App[None]):
         self._cols: int = 1
         self._focused_item = None
         self._thumbs_loaded: set[str] = set()
+        self._thumb_timer = None
 
     # ----- layout --------------------------------------------------------
 
@@ -261,6 +262,7 @@ class BoxTube(App[None]):
             if cols != self._cols:
                 self._cols = cols
                 self.query_one("#grid-inner", Grid).styles.grid_size_columns = cols
+            self._request_thumb_scan()  # reflow reveals different cards
 
     # ----- chips ---------------------------------------------------------
 
@@ -335,13 +337,20 @@ class BoxTube(App[None]):
         if 0 <= target < len(cards):
             cards[target].focus()
             cards[target].scroll_visible()
-            self._load_visible_thumbnails()  # newly-revealed cards
+            self._request_thumb_scan()  # newly-revealed cards
+
+    def _request_thumb_scan(self) -> None:
+        """Debounce: scan for visible thumbnails shortly after scrolling stops,
+        so rapid wheel/arrow scrolling doesn't restart the loader repeatedly."""
+        if self._thumb_timer is not None:
+            self._thumb_timer.stop()
+        self._thumb_timer = self.set_timer(0.12, self._load_visible_thumbnails)
 
     def on_mouse_scroll_down(self, event) -> None:
-        self._load_visible_thumbnails()
+        self._request_thumb_scan()
 
     def on_mouse_scroll_up(self, event) -> None:
-        self._load_visible_thumbnails()
+        self._request_thumb_scan()
 
     # ----- loading (workers) ---------------------------------------------
 
@@ -467,7 +476,8 @@ class BoxTube(App[None]):
                     self._thumbs_loaded.add(video.id)  # don't retry a hard failure
                     continue
                 self._thumbs_loaded.add(video.id)
-                self.call_from_thread(self._apply_card_thumb, card, image)
+                # Pre-resize off the UI thread so each card re-render is cheaper.
+                self.call_from_thread(self._apply_card_thumb, card, thumbnails.for_card(image))
 
     def _apply_card_thumb(self, card: VideoCard, image) -> None:
         try:

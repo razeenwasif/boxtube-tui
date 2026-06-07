@@ -37,6 +37,19 @@ def placeholder() -> PILImage.Image:
     return PILImage.new("RGB", (320, 180), _PANEL)
 
 
+# Grid cards are small; a downscaled copy re-renders cheaper than the full
+# thumbnail (which the larger preview pane keeps using).
+CARD_THUMB_WIDTH = 240
+
+
+def for_card(image: PILImage.Image) -> PILImage.Image:
+    """A copy of ``image`` sized for a grid card (cheaper to render)."""
+    if image.width <= CARD_THUMB_WIDTH:
+        return image
+    height = round(CARD_THUMB_WIDTH * image.height / image.width)
+    return image.resize((CARD_THUMB_WIDTH, height))
+
+
 def fetch(video_id: str, url: str) -> PILImage.Image:
     """Download a thumbnail (cached by video id). Raises on failure."""
     cached = _CACHE.get(video_id)
