@@ -239,6 +239,24 @@ def test_videos_for_feed_dispatch(monkeypatch):
         videos_for_feed("bogus", limit=5, cookies=None)
 
 
+def test_subscribed_channels_parsing(monkeypatch):
+    monkeypatch.setattr(youtube, "find_ytdlp", lambda: "/usr/bin/yt-dlp")
+    lines = "\n".join(
+        json.dumps(d)
+        for d in [
+            {"id": "UCabc123", "ie_key": "YoutubeTab", "title": "Cool Channel",
+             "url": "https://www.youtube.com/channel/UCabc123"},
+            {"title": "no id, skipped"},
+            {"id": "PLnope", "ie_key": "YoutubeTab", "title": "a playlist not a channel"},
+        ]
+    )
+    monkeypatch.setattr(youtube.subprocess, "run", _fake_run_factory(lines))
+    channels = youtube.subscribed_channels(cookies="/ck")
+    assert [c.id for c in channels] == ["UCabc123"]
+    assert channels[0].name == "Cool Channel"
+    assert channels[0].videos_url == "https://www.youtube.com/channel/UCabc123/videos"
+
+
 def test_user_playlists_parsing(monkeypatch):
     monkeypatch.setattr(youtube, "find_ytdlp", lambda: "/usr/bin/yt-dlp")
     lines = "\n".join(

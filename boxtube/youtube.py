@@ -65,10 +65,23 @@ class Playlist:
         return f"{self.count} videos" if self.count else "playlist"
 
 
+@dataclass
+class Channel:
+    """A subscribed channel, used for the sidebar + drill-down navigation."""
+
+    id: str
+    name: str
+
+    @property
+    def videos_url(self) -> str:
+        return f"https://www.youtube.com/channel/{self.id}/videos"
+
+
 # Authenticated feed targets (all require a cookies file).
 FEED_SUBSCRIPTIONS = "https://www.youtube.com/feed/subscriptions"
 FEED_HISTORY = "https://www.youtube.com/feed/history"
 FEED_PLAYLISTS = "https://www.youtube.com/feed/playlists"
+FEED_CHANNELS = "https://www.youtube.com/feed/channels"
 PLAYLIST_LIKED = "https://www.youtube.com/playlist?list=LL"
 PLAYLIST_WATCH_LATER = "https://www.youtube.com/playlist?list=WL"
 
@@ -265,6 +278,31 @@ def user_playlists(limit: int = 60, cookies: str | None = None) -> list[Playlist
 
 def playlist_videos(playlist_id: str, limit: int = 60, cookies: str | None = None) -> list[Video]:
     url = f"https://www.youtube.com/playlist?list={playlist_id}"
+    return _dicts_to_videos(_entries(url, limit=limit, cookies=cookies))
+
+
+def _dicts_to_channels(dicts: list[dict]) -> list[Channel]:
+    channels: list[Channel] = []
+    for d in dicts:
+        cid = d.get("id") or ""
+        if not cid.startswith("UC"):
+            url = d.get("url") or ""
+            if "/channel/" in url:
+                cid = url.split("/channel/", 1)[1].split("/")[0]
+            else:
+                continue
+        if not cid.startswith("UC"):
+            continue
+        channels.append(Channel(id=cid, name=d.get("title") or d.get("channel") or "Channel"))
+    return channels
+
+
+def subscribed_channels(limit: int = 50, cookies: str | None = None) -> list[Channel]:
+    return _dicts_to_channels(_entries(FEED_CHANNELS, limit=limit, cookies=cookies))
+
+
+def channel_videos(channel_id: str, limit: int = 40, cookies: str | None = None) -> list[Video]:
+    url = f"https://www.youtube.com/channel/{channel_id}/videos"
     return _dicts_to_videos(_entries(url, limit=limit, cookies=cookies))
 
 

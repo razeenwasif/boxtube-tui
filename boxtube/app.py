@@ -1,9 +1,9 @@
 """BoxTube — a TUI YouTube client built with Textual.
 
-A YouTube-like layout: a persistent search bar on top, a Library nav on the left
-(Home / History / Liked / Watch Later / Playlists), a results list in the middle,
-and a preview pane on the right. Personalized feeds use a cookies file for
-sign-in (see :mod:`boxtube.account`); search works signed out.
+A YouTube-styled layout: a header with a centered search bar, a row of filter
+chips, a left sidebar (Home / History / Playlists / Watch Later / Liked, plus your
+subscribed channels), a results list, and a preview pane. Personalized feeds use a
+cookies file for sign-in (see :mod:`boxtube.account`); search works signed out.
 """
 
 from __future__ import annotations
@@ -13,21 +13,22 @@ import os
 from textual import work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.containers import Horizontal, VerticalScroll
+from textual.containers import Horizontal, HorizontalScroll, VerticalScroll
+from textual.message import Message
 from textual.widgets import Footer, Input, Label, ListItem, ListView, Static
 from textual_image.widget import Image
 
 from . import account, opener, player, thumbnails, youtube
 from .player_screen import PlayerScreen
-from .youtube import Playlist, SearchError, Video
+from .youtube import Channel, Playlist, SearchError, Video
 
 # Left-nav items: (key, icon, label). All require sign-in.
 NAV_ITEMS = [
     ("home", "🏠", "Home"),
     ("history", "🕘", "History"),
-    ("liked", "👍", "Liked"),
-    ("watch_later", "⏰", "Watch Later"),
     ("playlists", "🎵", "Playlists"),
+    ("watch_later", "⏰", "Watch Later"),
+    ("liked", "👍", "Liked"),
 ]
 
 SOURCE_TITLES = {
@@ -38,6 +39,9 @@ SOURCE_TITLES = {
     "playlists": "Playlists",
 }
 
+# Filter chips under the header. "All" returns to Home; the rest run a search.
+CHIPS = ["All", "Music", "Gaming", "News", "Live", "Podcasts", "Learning", "Sports", "Comedy", "Mixes"]
+
 # Sources that require a valid signed-in session.
 FEED_KEYS = {"home", "history", "liked", "watch_later", "playlists"}
 
@@ -46,8 +50,24 @@ _AUTH_HINTS = ("does not exist", "sign in", "log in", "login", "private", "cooki
                "members-only", "unavailable", "not available on this app")
 
 
+class Chip(Static):
+    """A clickable filter pill in the chips row."""
+
+    class Selected(Message):
+        def __init__(self, label: str) -> None:
+            super().__init__()
+            self.label = label
+
+    def __init__(self, label: str) -> None:
+        super().__init__(label, classes="chip")
+        self.label = label
+
+    def on_click(self) -> None:
+        self.post_message(self.Selected(self.label))
+
+
 class NavItem(ListItem):
-    """A row in the left Library nav."""
+    """A row in the left sidebar nav."""
 
     def __init__(self, key: str, icon: str, label: str) -> None:
         super().__init__()
@@ -57,6 +77,17 @@ class NavItem(ListItem):
 
     def compose(self) -> ComposeResult:
         yield Label(f"{self._icon}  {self._label}")
+
+
+class ChannelItem(ListItem):
+    """A subscribed channel row (drill-down to its videos)."""
+
+    def __init__(self, channel: Channel) -> None:
+        super().__init__()
+        self.channel = channel
+
+    def compose(self) -> ComposeResult:
+        yield Label(f"[#ff6b6b]◍[/]  {_escape(self.channel.name)}", markup=True, classes="channel")
 
 
 class VideoItem(ListItem):
@@ -117,19 +148,28 @@ class BoxTube(App[None]):
         self._current_video_id: str | None = None
         self._current_source: str | None = None
         self._drill_playlist: Playlist | None = None
+        self._drill_channel: Channel | None = None
         self._last_query: str | None = None
 
     # ----- layout --------------------------------------------------------
 
     def compose(self) -> ComposeResult:
         with Horizontal(id="appbar"):
-            yield Static("[#ff6b6b]●[/]  [b]BoxTube[/b]", id="brand", markup=True)
+            yield Static("[#ff3b3b]▶[/]  [b]BoxTube[/b]", id="brand", markup=True)
+            with Horizontal(id="search-wrap"):
+                yield Input(placeholder="Search", id="search")
             yield Static("", id="auth", markup=True)
-        yield Input(placeholder="Search YouTube…", id="search")
+        with HorizontalScroll(id="chips"):
+            for label in CHIPS:
+                yield Chip(label)
         with Horizontal(id="body"):
-            with ListView(id="nav"):
-                for key, icon, label in NAV_ITEMS:
-                    yield NavItem(key, icon, label)
+            with VerticalScroll(id="sidebar"):
+                yield Static("You", classes="nav-section")
+                with ListView(id="nav"):
+                    for key, icon, label in NAV_ITEMS:
+                        yield NavItem(key, icon, label)
+                yield Static("Subscriptions", classes="nav-section")
+                yield ListView(id="subs")
             yield ListView(id="results")
             with VerticalScroll(id="detail-pane"):
                 yield Image(thumbnails.placeholder(), id="thumb")
@@ -138,14 +178,14 @@ class BoxTube(App[None]):
         yield Footer()
 
     def on_mount(self) -> None:
-        self.query_one("#search", Input).border_title = "Search"
-        self.query_one("#nav", ListView).border_title = "Library"
         self.query_one("#results", ListView).border_title = "Home"
         self.query_one("#detail-pane").border_title = "Preview"
         self._update_auth()
         self.query_one("#nav", ListView).index = 0
+        self._set_active_chip("All")
 
         if account.is_signed_in():
+            self.load_channels()
             self._open_source("home")
         else:
             self._show_signin_help()
@@ -155,9 +195,26 @@ class BoxTube(App[None]):
     def _update_auth(self) -> None:
         auth = self.query_one("#auth", Static)
         if account.is_signed_in():
-            auth.update("[#6ee7a0]●[/] [#a8a8b2]Signed in[/]")
+            auth.update("[#6ee7a0]◉[/] [#e8e8ea]You[/]")
         else:
-            auth.update("[#8a8a94]○ Signed out — press [#ff6b6b]?[/] to sign in[/]")
+            auth.update("[#8a8a94]○ Sign in[/] [#ff6b6b](?)[/]")
+
+    # ----- chips ---------------------------------------------------------
+
+    def on_chip_selected(self, event: Chip.Selected) -> None:
+        self._set_active_chip(event.label)
+        if event.label == "All":
+            self._open_source("home")
+        else:
+            self._current_source = None
+            self._drill_playlist = None
+            self._drill_channel = None
+            self._last_query = event.label
+            self.run_search(event.label)
+
+    def _set_active_chip(self, label: str) -> None:
+        for chip in self.query(Chip):
+            chip.set_class(chip.label == label, "-active")
 
     # ----- navigation ----------------------------------------------------
 
@@ -169,7 +226,9 @@ class BoxTube(App[None]):
     def _open_source(self, key: str) -> None:
         self._current_source = key
         self._drill_playlist = None
+        self._drill_channel = None
         self._last_query = None
+        self._set_active_chip("All" if key == "home" else "")
         for i, (k, _, _) in enumerate(NAV_ITEMS):
             if k == key:
                 self.query_one("#nav", ListView).index = i
@@ -178,11 +237,19 @@ class BoxTube(App[None]):
 
     def _open_playlist(self, playlist: Playlist) -> None:
         self._drill_playlist = playlist
+        self._drill_channel = None
         self.load_playlist(playlist)
+
+    def _open_channel(self, channel: Channel) -> None:
+        self._drill_channel = channel
+        self._drill_playlist = None
+        self.load_channel(channel)
 
     def action_back(self) -> None:
         if self._drill_playlist is not None:
             self._open_source("playlists")
+        elif self._drill_channel is not None:
+            self._open_source(self._current_source or "home")
 
     # ----- loading (workers) ---------------------------------------------
 
@@ -222,6 +289,31 @@ class BoxTube(App[None]):
         self.call_from_thread(self._populate_videos, videos, playlist.title)
 
     @work(thread=True, exclusive=True, group="source")
+    def load_channel(self, channel: Channel) -> None:
+        cookies = account.cookies_arg()
+        self.call_from_thread(self._set_results_title, f"Loading {channel.name}…")
+        try:
+            videos = youtube.channel_videos(channel.id, cookies=cookies)
+        except SearchError as exc:
+            self.call_from_thread(self._on_load_error, str(exc))
+            return
+        except Exception as exc:  # pragma: no cover - defensive
+            self.call_from_thread(self._on_load_error, str(exc))
+            return
+        self.call_from_thread(self._populate_videos, videos, channel.name)
+
+    @work(thread=True, exclusive=True, group="channels")
+    def load_channels(self) -> None:
+        cookies = account.cookies_arg()
+        if cookies is None:
+            return
+        try:
+            channels = youtube.subscribed_channels(cookies=cookies)
+        except Exception:
+            return
+        self.call_from_thread(self._populate_channels, channels)
+
+    @work(thread=True, exclusive=True, group="source")
     def run_search(self, query: str) -> None:
         cookies = account.cookies_arg()
         self.call_from_thread(self._set_results_title, "Searching…")
@@ -243,7 +335,9 @@ class BoxTube(App[None]):
             if query:
                 self._current_source = None
                 self._drill_playlist = None
+                self._drill_channel = None
                 self._last_query = query
+                self._set_active_chip("")
                 self.run_search(query)
 
     # ----- populate ------------------------------------------------------
@@ -280,6 +374,12 @@ class BoxTube(App[None]):
             self._set_results_title(title)
             self._show_message("No playlists", "You don't have any playlists yet.")
 
+    def _populate_channels(self, channels: list[Channel]) -> None:
+        subs = self.query_one("#subs", ListView)
+        subs.clear()
+        for channel in channels:
+            subs.append(ChannelItem(channel))
+
     def _set_results_title(self, title: str) -> None:
         self.query_one("#results", ListView).border_title = title
 
@@ -301,8 +401,11 @@ class BoxTube(App[None]):
     # ----- selection / details ------------------------------------------
 
     def on_list_view_selected(self, event: ListView.Selected) -> None:
-        if event.list_view.id == "nav":
+        lv = event.list_view.id
+        if lv == "nav":
             self.action_select_nav(event.list_view.index or 0)
+        elif lv == "subs" and isinstance(event.item, ChannelItem):
+            self._open_channel(event.item.channel)
         elif isinstance(event.item, VideoItem):
             self._watch(event.item.video)
         elif isinstance(event.item, PlaylistItem):
@@ -388,8 +491,12 @@ class BoxTube(App[None]):
 
     def action_refresh(self) -> None:
         self._update_auth()
+        if account.is_signed_in():
+            self.load_channels()
         if self._drill_playlist is not None:
             self.load_playlist(self._drill_playlist)
+        elif self._drill_channel is not None:
+            self.load_channel(self._drill_channel)
         elif self._current_source is not None:
             self._open_source(self._current_source)
         elif self._last_query:

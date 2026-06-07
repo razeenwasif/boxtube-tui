@@ -30,6 +30,12 @@ def _offline(monkeypatch, fake_image):
     monkeypatch.setattr(thumb_mod, "fetch", lambda video_id, url: fake_image)
     monkeypatch.setattr(account_mod, "is_signed_in", lambda: False)
     monkeypatch.setattr(account_mod, "cookies_arg", lambda: None)
+    # Stub the yt-dlp-backed loaders so no test ever spawns a real subprocess
+    # (even when a test forces "signed in" and on_mount loads feeds/channels).
+    monkeypatch.setattr("boxtube.youtube.subscribed_channels", lambda **k: [])
+    monkeypatch.setattr("boxtube.youtube.videos_for_feed", lambda *a, **k: [])
+    monkeypatch.setattr("boxtube.youtube.user_playlists", lambda **k: [])
+    monkeypatch.setattr("boxtube.youtube.search", lambda *a, **k: [])
 
 
 def test_boot_has_all_widgets():
@@ -37,12 +43,67 @@ def test_boot_has_all_widgets():
         app = BoxTube()
         async with app.run_test(size=(120, 34)):
             for sel in (
-                "#appbar", "#brand", "#auth", "#search",
-                "#nav", "#results", "#detail-pane", "#thumb", "#meta", "#desc",
+                "#appbar", "#brand", "#search", "#auth", "#chips",
+                "#sidebar", "#nav", "#subs", "#results", "#detail-pane",
+                "#thumb", "#meta", "#desc",
             ):
                 app.query_one(sel)  # raises if missing
             # Nav has one row per source.
             assert len(app.query_one("#nav", ListView).children) == len(NAV_ITEMS)
+
+    run(go())
+
+
+def test_chip_search_runs_query(monkeypatch):
+    from boxtube.app import Chip
+
+    captured = {}
+    monkeypatch.setattr(BoxTube, "run_search", lambda self, q: captured.setdefault("q", q))
+
+    async def go():
+        app = BoxTube()
+        async with app.run_test() as pilot:
+            app.on_chip_selected(Chip.Selected("Music"))
+            await pilot.pause()
+            assert captured.get("q") == "Music"
+            # the chip becomes the active one
+            active = [c.label for c in app.query(Chip) if c.has_class("-active")]
+            assert active == ["Music"]
+
+    run(go())
+
+
+def test_chip_all_opens_home(monkeypatch):
+    from boxtube.app import Chip
+
+    opened = {}
+    monkeypatch.setattr(BoxTube, "_open_source", lambda self, key: opened.setdefault("key", key))
+
+    async def go():
+        app = BoxTube()
+        async with app.run_test() as pilot:
+            app.on_chip_selected(Chip.Selected("All"))
+            await pilot.pause()
+            assert opened.get("key") == "home"
+
+    run(go())
+
+
+def test_channel_drilldown_and_back():
+    from boxtube.app import ChannelItem
+    from boxtube.youtube import Channel
+
+    async def go():
+        app = BoxTube()
+        async with app.run_test() as pilot:
+            ch = Channel(id="UCabc", name="Some Channel")
+            app.query_one("#subs", ListView).append(ChannelItem(ch))
+            await pilot.pause()
+            app._open_channel(ch)
+            assert app._drill_channel is ch
+            app._current_source = "home"
+            app.action_back()
+            assert app._drill_channel is None and app._current_source == "home"
 
     run(go())
 
@@ -214,11 +275,11 @@ def test_auth_error_shows_cookie_trouble(monkeypatch):
     async def go():
         app = BoxTube()
         async with app.run_test() as pilot:
+            await pilot.pause()  # let on_mount's startup load settle first
             calls: list = []
             monkeypatch.setattr(app, "_show_cookie_trouble", lambda detail="": calls.append(detail))
             monkeypatch.setattr(app, "notify", lambda *a, **k: None)
             app._on_load_error("LL: YouTube said: The playlist does not exist.")
-            await pilot.pause()
             assert calls
             assert app.query_one("#results", ListView).border_title == "Sign-in problem"
 

@@ -1,94 +1,144 @@
-/* BoxTube — modern, refined dark theme with a light-red accent (#ff6b6b) */
+/* BoxTube — YouTube-styled dark theme (near-black #0f0f0f, red accents) */
 
 Screen {
-    background: #0d0d10;
-    color: #e8e8ea;
+    background: #0f0f0f;
+    color: #f1f1f1;
 }
 
-/* ----- top bar ----------------------------------------------------- */
+/* ----- header bar -------------------------------------------------- */
 
 #appbar {
-    dock: top;
-    height: 1;
-    background: #16161b;
+    height: 3;
+    background: #0f0f0f;
     padding: 0 2;
 }
 
 #brand {
-    width: 1fr;
-    content-align: left middle;
-    color: #f2f2f4;
-}
-
-#auth {
     width: auto;
-    content-align: right middle;
+    height: 3;
+    content-align: left middle;
+    color: #f1f1f1;
+    padding: 0 2 0 0;
 }
 
-/* ----- search ------------------------------------------------------ */
+#search-wrap {
+    width: 1fr;
+    height: 3;
+    align: center middle;
+}
 
 #search {
-    margin: 1 2 0 2;
+    width: 70%;
+    max-width: 80;
     height: 3;
-    background: #16161b;
-    border: round #34343d;
-    border-title-color: #6f6f78;
-    color: #e8e8ea;
+    background: #121212;
+    border: round #303030;
+    color: #f1f1f1;
 }
 
 #search:focus {
     border: round #ff6b6b;
-    border-title-color: #ff8a8a;
 }
 
-/* ----- body split -------------------------------------------------- */
+#auth {
+    width: auto;
+    height: 3;
+    content-align: right middle;
+    color: #aaaaaa;
+}
+
+/* ----- filter chips ------------------------------------------------ */
+
+#chips {
+    height: 1;
+    background: #0f0f0f;
+    padding: 0 2;
+    scrollbar-size: 0 0;
+}
+
+.chip {
+    width: auto;
+    height: 1;
+    margin: 0 1 0 0;
+    padding: 0 2;
+    background: #272727;
+    color: #f1f1f1;
+}
+
+.chip:hover {
+    background: #3f3f3f;
+}
+
+.chip.-active {
+    background: #f1f1f1;
+    color: #0f0f0f;
+    text-style: bold;
+}
+
+/* ----- body -------------------------------------------------------- */
 
 #body {
     height: 1fr;
-    margin: 1 2 0 2;
+    background: #0f0f0f;
+    padding: 1 1 0 1;
 }
 
-/* left Library nav */
-#nav {
-    width: 24;
+/* left sidebar */
+#sidebar {
+    width: 26;
     height: 1fr;
-    padding: 0;
-    background: #121217;
-    border: round #ff6b6b;
-    border-title-color: #ff8a8a;
-    border-title-style: bold;
+    background: #0f0f0f;
+    padding: 0 1;
     scrollbar-size-vertical: 1;
-    scrollbar-color: #34343d;
+    scrollbar-color: #303030;
 }
 
-NavItem {
+.nav-section {
+    height: 1;
+    margin: 1 0 0 1;
+    color: #aaaaaa;
+    text-style: bold;
+}
+
+#nav, #subs {
+    height: auto;
+    background: #0f0f0f;
+}
+
+#subs {
+    margin-bottom: 1;
+}
+
+NavItem, ChannelItem {
     height: 1;
     padding: 0 1;
-    color: #c8c8d0;
-    border-left: thick #121217;
+    color: #f1f1f1;
+    border-left: thick #0f0f0f;
 }
 
-ListView#nav > NavItem.-highlight {
-    background: #ff6b6b 12%;
+ListView#nav > NavItem.-highlight,
+ListView#subs > ChannelItem.-highlight {
+    background: #272727;
     border-left: thick #ff6b6b;
 }
 
-ListView#nav:focus > NavItem.-highlight {
-    background: #ff6b6b 22%;
+ListView#nav:focus > NavItem.-highlight,
+ListView#subs:focus > ChannelItem.-highlight {
+    background: #323232;
     color: #ffffff;
 }
 
 /* middle results */
 #results {
-    width: 3fr;
+    width: 2fr;
     height: 1fr;
-    padding: 0;
-    margin: 0 0 0 2;
-    background: #121217;
-    border: round #ff6b6b;
-    border-title-color: #ff8a8a;
+    background: #181818;
+    border: round #303030;
+    border-title-color: #f1f1f1;
     border-title-style: bold;
-    scrollbar-color: #34343d;
+    margin: 0 1;
+    padding: 0;
+    scrollbar-color: #303030;
     scrollbar-color-hover: #ff6b6b;
     scrollbar-size-vertical: 1;
 }
@@ -97,14 +147,13 @@ ListView#nav:focus > NavItem.-highlight {
 #detail-pane {
     width: 2fr;
     height: 1fr;
-    margin-left: 2;
-    padding: 1 2;
-    background: #121217;
-    border: round #ff6b6b;
-    border-title-color: #ff8a8a;
+    background: #181818;
+    border: round #303030;
+    border-title-color: #f1f1f1;
     border-title-style: bold;
+    padding: 1 2;
     scrollbar-size-vertical: 1;
-    scrollbar-color: #34343d;
+    scrollbar-color: #303030;
 }
 
 /* ----- result rows ------------------------------------------------- */
@@ -113,27 +162,27 @@ VideoItem, PlaylistItem {
     height: auto;
     padding: 1 1 1 1;
     background: transparent;
-    border-left: thick #121217;
+    border-left: thick #181818;
 }
 
 VideoItem .title, PlaylistItem .title {
     text-style: bold;
-    color: #d6d6da;
+    color: #f1f1f1;
 }
 
 VideoItem .meta, PlaylistItem .meta {
-    color: #6f6f78;
+    color: #888888;
 }
 
 ListView#results > VideoItem.-highlight,
 ListView#results > PlaylistItem.-highlight {
-    background: #ff6b6b 10%;
+    background: #232323;
     border-left: thick #ff6b6b;
 }
 
 ListView#results:focus > VideoItem.-highlight,
 ListView#results:focus > PlaylistItem.-highlight {
-    background: #ff6b6b 18%;
+    background: #2c2c2c;
 }
 
 ListView#results:focus > VideoItem.-highlight .title,
@@ -143,8 +192,6 @@ ListView#results:focus > PlaylistItem.-highlight .title {
 
 /* ----- detail pane contents --------------------------------------- */
 
-/* Thumbnail: width derived from height so the 16:9 frame never stretches,
-   while the percentage height lets it grow/shrink with the window. */
 #thumb {
     width: auto;
     height: 45%;
@@ -240,12 +287,12 @@ PlayerScreen {
 /* ----- footer ------------------------------------------------------ */
 
 Footer {
-    background: #16161b;
-    color: #8a8a94;
+    background: #0f0f0f;
+    color: #888888;
 }
 
 Footer > .footer--key {
-    background: #16161b;
+    background: #0f0f0f;
     color: #ff8a8a;
     text-style: bold;
 }

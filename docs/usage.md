@@ -15,26 +15,27 @@ the [accounts guide](accounts.md) to enable personalized tabs.
 ## Interface tour
 
 ```
-●  BoxTube                                          ● Signed in           ← app bar + auth
-╭─ Search ───────────────────────────────────────────────────────────╮
-│ your query here                                                     │   ← search (top bar)
-╰─────────────────────────────────────────────────────────────────────╯
-╭─ Library ──╮╭─ Home — Subscriptions (40) ─╮╭─ Preview ──────────────╮
-│▌🏠 Home    ││▌Highlighted video title     ││      [ thumbnail ]     │
+▶ BoxTube            ╭──────── Search ────────╮              ◉ You        ← header
+ [All] Music Gaming News Live Podcasts Learning Sports …                  ← filter chips
+╭ You ───────╮╭─ Home — Subscriptions (40) ─╮╭─ Preview ──────────────╮
+│ 🏠 Home    ││▌Highlighted video title     ││      [ thumbnail ]     │
 │ 🕘 History ││ Channel   12:34   1.2M      ││                        │
-│ 👍 Liked   ││ Next video title            ││ Highlighted title      │
+│ 🎵 Playlists│ Next video title            ││ Highlighted title      │
 │ ⏰ Later   ││ Channel   3:21    44K       ││ Channel  …             │
-│ 🎵 Playlist││ …                           ││ Length   …             │
+│ 👍 Liked   ││ …                           ││ Length   …             │
+│ Subscriptions                             ││ Views    …             │
+│ ◍ Lofi Girl││                             ││                        │
 ╰────────────╯╰─────────────────────────────╯╰────────────────────────╯
  / Search   Enter Play   o Open   r Refresh   ? Sign in        ^q Quit     ← footer
 ```
 
-- **App bar** — branding and your sign-in status (`● Signed in` / `○ Signed out`).
-- **Search** — type a query, press **Enter** (works without signing in).
-- **Library nav** — switch the middle pane between Home, History, Liked, Watch
-  Later, and Playlists.
-- **Results** — videos (or playlists) for the current tab. The highlighted row has
-  a light-red accent bar.
+- **Header** — the ▶ BoxTube logo, a centered search bar (type + **Enter**; works
+  signed out), and your sign-in status on the right (`◉ You` / `○ Sign in`).
+- **Filter chips** — click a category pill to search it; **All** returns to Home.
+- **Sidebar** — a **You** group (Home, History, Playlists, Watch Later, Liked) and
+  a **Subscriptions** group listing your subscribed channels.
+- **Results** — videos (or playlists) for the current tab/selection. The
+  highlighted row has a light-red accent bar.
 - **Preview** — the highlighted video's thumbnail, metadata, and description.
 - **Footer** — context keybindings.
 
@@ -67,9 +68,17 @@ You can also click nav items and results with the mouse.
 If you're signed out and open a personalized tab, BoxTube shows sign-in steps —
 press `?` any time for them, and `r` to refresh once you've added cookies.
 
+### Subscribed channels & filter chips
+
+- The **Subscriptions** group in the sidebar lists your subscribed channels.
+  Click one (or focus the list and press **Enter**) to load that channel's
+  videos; **Backspace** goes back.
+- The **filter chips** under the header run a search for that category (e.g.
+  *Music*, *Gaming*). **All** returns to your Home feed.
+
 ### Playlists (drill-down)
 
-1. Open the **Playlists** tab (`5`). It lists your playlists.
+1. Open the **Playlists** tab (`3`). It lists your playlists.
 2. Highlight one and press **Enter** to open it — the results switch to that
    playlist's videos.
 3. Press **Backspace** to return to the playlist list.

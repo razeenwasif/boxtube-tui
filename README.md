@@ -14,16 +14,18 @@ liked videos, watch later, and playlists**, see **inline thumbnail previews**, a
 using your terminal's native graphics protocol when available. No API key required.
 
 ```
-●  BoxTube                                               ● Signed in
-╭─ Search ──────────────────────────────────────────────────────────────╮
-│ lofi hip hop                                                           │
-╰───────────────────────────────────────────────────────────────────────╯
-╭─ Library ──╮╭─ Home — Subscriptions (3) ──╮╭─ Preview ────────────────╮
-│▌🏠 Home    ││▌Never Gonna Give You Up     ││      ░▒▓ thumbnail ▓▒░   │
+▶ BoxTube            ╭──────── Search ────────╮                  ◉ You
+                     ╰────────────────────────╯
+ [All] Music Gaming News Live Podcasts Learning Sports Comedy Mixes
+╭ You ───────╮╭─ Home — Subscriptions (3) ──╮╭─ Preview ────────────────╮
+│ 🏠 Home    ││▌Never Gonna Give You Up     ││      ░▒▓ thumbnail ▓▒░   │
 │ 🕘 History ││ Rick Astley   3:33  1.6B    ││                          │
-│ 👍 Liked   ││ lofi hip hop radio          ││ Never Gonna Give You Up  │
+│ 🎵 Playlists│ lofi hip hop radio          ││ Never Gonna Give You Up  │
 │ ⏰ Later   ││ Lofi Girl   —  55.2M        ││ Channel  Rick Astley     │
-│ 🎵 Playlist││ …                           ││ Length   3:33            │
+│ 👍 Liked   ││ …                           ││ Length   3:33            │
+│ Subscriptions                             ││ Views    1.6B            │
+│ ◍ Lofi Girl││                             ││                          │
+│ ◍ MKBHD    ││                             ││                          │
 ╰────────────╯╰─────────────────────────────╯╰──────────────────────────╯
  / Search   Enter Play   o Open   r Refresh   ? Sign in          ^q Quit
 ```
@@ -43,11 +45,13 @@ using your terminal's native graphics protocol when available. No API key requir
 
 ## Features
 
-- **YouTube-like layout** — a left Library nav (Home, History, Liked, Watch Later,
-  Playlists), a results list, and a preview pane.
+- **YouTube-styled layout** — a header with a centered search bar, a row of filter
+  chips, a left sidebar (Home / History / Playlists / Watch Later / Liked plus your
+  **subscribed channels**), a results list, and a preview pane.
 - **Sign in for your feed** — browse your subscriptions feed, watch history, liked
-  videos, watch later, and playlists. Auth is via a browser-exported cookies file
-  (no passwords). See the [accounts guide](docs/accounts.md).
+  videos, watch later, playlists, and per-channel videos. Auth is via a
+  browser-exported cookies file (no passwords). See the
+  [accounts guide](docs/accounts.md).
 - **In-terminal playback with a custom player** — videos play inside the terminal
   (mpv runs headless as the A/V engine) with BoxTube's own mouse-driven control
   bar: play/pause, skip, a clickable seek bar, volume, and time. Renders via the

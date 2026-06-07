@@ -57,7 +57,9 @@ The left nav (`NAV_ITEMS` in `app.py`) maps each tab to a yt-dlp target:
 | Liked | `youtube.liked_videos` | `playlist?list=LL` | cookies |
 | Watch Later | `youtube.watch_later` | `playlist?list=WL` | cookies |
 | Playlists | `youtube.user_playlists` → `playlist_videos` | `/feed/playlists` → `playlist?list=<id>` | cookies |
-| Search (top bar) | `youtube.search` | `ytsearchN:<query>` | none |
+| Subscriptions (sidebar) | `youtube.subscribed_channels` → `channel_videos` | `/feed/channels` → `/channel/<id>/videos` | cookies |
+| Filter chips | `youtube.search` (or Home for "All") | `ytsearchN:<chip>` | none |
+| Search (header) | `youtube.search` | `ytsearchN:<query>` | none |
 
 All feed loaders funnel through one internal runner, `youtube._entries(target,
 limit, cookies)`, which runs `yt-dlp --flat-playlist --dump-json` (adding

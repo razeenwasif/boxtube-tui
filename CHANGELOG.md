@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **YouTube-styled UI**: a header with the ▶ logo, a centered search bar, and a
+  sign-in indicator; a row of clickable **filter chips** (All / Music / Gaming /
+  …) that run searches; and a sidebar reorganized into a **You** group and a
+  **Subscriptions** group that lists your subscribed channels. Clicking a channel
+  drills into its videos (`youtube.subscribed_channels` / `channel_videos` via
+  `/feed/channels`). Near-black `#0f0f0f` theme.
 - **Custom in-terminal video player** with mouse-driven controls. mpv now runs
   headless as an A/V engine controlled over its JSON IPC socket; BoxTube samples
   the current frame into a Textual `Image` widget and draws its own crisp control

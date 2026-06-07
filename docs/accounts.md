@@ -70,7 +70,8 @@ method above.)
 | 👍 Liked | Your liked videos (`LL`) | Yes |
 | ⏰ Watch Later | Your watch later list (`WL`) | Yes |
 | 🎵 Playlists | Your playlists → open one to see its videos | Yes |
-| 🔍 Search (top bar) | Public YouTube search | No |
+| ◍ Subscriptions | Your subscribed channels → open one to see its videos | Yes |
+| 🔍 Search / chips | Public YouTube search | No |
 
 > **Why is there no algorithmic "Home" recommendations feed?** YouTube doesn't
 > expose the recommendation feed to yt-dlp (and the official Data API exposes
