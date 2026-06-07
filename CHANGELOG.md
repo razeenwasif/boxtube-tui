@@ -41,6 +41,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - `youtube.search()` and `player.play()` now accept an optional `cookies`
   argument; feed loaders share one internal yt-dlp runner.
+- **Player performance**: decoupled frame capture from rendering — a daemon
+  thread captures into a "latest frame" slot and a steady UI timer renders it,
+  dropping stale frames. This removes the jitter from mpv's variable screenshot
+  latency. Capture is skipped while paused, frames are smaller (≤360p, 480px
+  wide), and re-renders are suppressed when the frame is unchanged. Tunable via
+  `BOXTUBE_PLAYER_FPS` and `BOXTUBE_PLAYER_HEIGHT`.
 
 ### Fixed
 - Playback no longer silently fails when signed in. Sending cookies to mpv broke

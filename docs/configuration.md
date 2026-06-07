@@ -13,6 +13,8 @@ knobs that exist are documented here.
 | `BOXTUBE_PLAYBACK_COOKIES` | any non-empty value | unset (off) | Send your cookies to mpv during playback (needed for private/members-only videos; breaks normal playback unless a full JS solver is set up) |
 | `BOXTUBE_HWDEC` | mpv `--hwdec` mode, or empty | `auto-safe` | Hardware video decoding mode passed to mpv; empty omits the option |
 | `BOXTUBE_THUMB_CACHE_SIZE` | integer | `64` | Max thumbnails kept in the in-memory LRU cache (`0` disables caching) |
+| `BOXTUBE_PLAYER_FPS` | integer (1–60) | `15` | Player render/capture frame rate |
+| `BOXTUBE_PLAYER_HEIGHT` | integer (144–1080) | `360` | Max video height the player streams/decodes |
 | `XDG_CONFIG_HOME` | Path | `~/.config` | Base dir for the default cookies path |
 
 ### Sign-in / cookies (`BOXTUBE_COOKIES`)
@@ -62,6 +64,24 @@ Set `BOXTUBE_PLAYBACK_COOKIES=1` only if you need to play **private** or
 **members-only** videos *and* have a working JS solver configured — otherwise it
 will break normal playback.
 
+### Player performance (`BOXTUBE_PLAYER_FPS`, `BOXTUBE_PLAYER_HEIGHT`)
+
+The player captures frames from mpv and renders them on a steady timer,
+independent of mpv's (variable) screenshot latency, dropping stale frames. Two
+knobs trade smoothness for CPU:
+
+```bash
+BOXTUBE_PLAYER_FPS=20 boxtube       # smoother, more CPU
+BOXTUBE_PLAYER_FPS=10 boxtube       # lighter, less smooth
+BOXTUBE_PLAYER_HEIGHT=240 boxtube   # smaller frames = cheaper capture/transmit
+```
+
+If playback feels choppy on a slower machine or terminal, **lower** the fps (and
+optionally the height). On a fast graphics terminal you can **raise** the fps.
+While paused, the player stops capturing entirely (a paused frame never changes),
+so it idles cheaply. The per-frame render cost is dominated by your terminal's
+image backend (kitty graphics is cheapest; sixel/half-block cost more).
+
 ### Video output (`BOXTUBE_VO`)
 
 Playback renders video into the terminal using an mpv *video output* (`--vo`).
@@ -98,7 +118,8 @@ are the natural first place to customize.
 | Setting | Location | Default | Notes |
 |---------|----------|---------|-------|
 | Search result limit | `boxtube/app.py` (`search(query, limit=25)`) | 25 | Max results per search |
-| Playback resolution cap | `boxtube/player.py` (`--ytdl-format`) | ≤480p | Lower res starts faster; identical once rendered |
+| Playback resolution cap | `BOXTUBE_PLAYER_HEIGHT` (engine `--ytdl-format`) | ≤360p | Lower res starts faster; tune for your terminal |
+| Player display width | `boxtube/player_screen.py` (`DISPLAY_WIDTH`) | 480px | Frames resized before render to bound work |
 | Thumbnail source | `boxtube/youtube.py` (`Video.thumbnail_url`) | `i.ytimg.com/.../mqdefault.jpg` | Clean 320×180 16:9 frame |
 | Description truncation | `boxtube/app.py` (`_show_details`) | 1500 chars | Keeps the preview pane tidy |
 | Accent color | `boxtube/boxtube.tcss` (`#ff6b6b`) | light red | Theme accent |

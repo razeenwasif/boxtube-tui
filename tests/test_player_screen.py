@@ -22,9 +22,10 @@ def run(coro):
 class FakeEngine:
     """Stand-in for MpvEngine: no process, canned properties, records calls."""
 
-    def __init__(self, url, cookies=None):
+    def __init__(self, url, cookies=None, max_height=480):
         self.url = url
         self.cookies = cookies
+        self.max_height = max_height
         self.calls: list = []
         self._t = 0.0
         self._paused = False

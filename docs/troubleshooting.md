@@ -126,6 +126,21 @@ The Library tabs need a valid YouTube cookies file.
   Later items), or your account region/settings hide it. Try another tab to
   confirm sign-in works.
 
+## Playback is choppy, slow, or jittery
+
+The player renders at `BOXTUBE_PLAYER_FPS` (default 15) and streams at
+`BOXTUBE_PLAYER_HEIGHT` (default 360p). On a slower machine or a terminal whose
+image backend is expensive (sixel / half-block), lower them:
+
+```bash
+BOXTUBE_PLAYER_FPS=10 BOXTUBE_PLAYER_HEIGHT=240 boxtube
+```
+
+A graphics terminal (kitty / Ghostty) renders frames far more cheaply than a
+half-block fallback, so it's the best way to get smooth, sharp playback — see
+[video output](configuration.md#video-output-boxtube_vo). Hardware decode
+(`BOXTUBE_HWDEC`) also helps on capable systems.
+
 ## Video is blocky / low quality
 
 You're on the `tct` (truecolor text) output, the universal fallback. This is

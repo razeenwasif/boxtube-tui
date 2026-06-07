@@ -8,6 +8,7 @@ skip, a clickable seek bar, volume, time).
 from __future__ import annotations
 
 import asyncio
+import os
 import threading
 import time
 
@@ -24,8 +25,20 @@ from textual_image.widget import Image
 from .engine import EngineError, MpvEngine
 from .youtube import Video, human_duration
 
-FRAME_FPS = 12
-FRAME_MAX_WIDTH = 640
+def _env_int(name: str, default: int, lo: int, hi: int) -> int:
+    try:
+        return max(lo, min(hi, int(os.environ.get(name, default))))
+    except (TypeError, ValueError):
+        return default
+
+
+# Render/capture cadence and frame size. Capture runs independently and the UI
+# renders the latest frame on a steady timer (stale frames are dropped), which
+# smooths the jitter from mpv's variable screenshot latency. Smaller frames cut
+# both the screenshot cost and the terminal render/transmit cost.
+PLAYER_FPS = _env_int("BOXTUBE_PLAYER_FPS", 15, 1, 60)
+PLAYER_HEIGHT = _env_int("BOXTUBE_PLAYER_HEIGHT", 360, 144, 1080)
+DISPLAY_WIDTH = 480
 
 
 def _black_frame() -> PILImage.Image:
@@ -84,6 +97,12 @@ class PlayerScreen(Screen):
         self._close_started = False
         self._pump_running = False
         self._duration = 0.0
+        # Decoupled capture/render: the capture thread writes the latest frame
+        # and properties here; the render timer (UI thread) picks them up.
+        self._latest = None
+        self._shown = None
+        self._props: dict = {}
+        self._render_timer = None
 
     def compose(self) -> ComposeResult:
         yield Static(f"[b #ff8a8a]{self.video.title}[/]", id="pl-title", markup=True)
@@ -117,8 +136,14 @@ class PlayerScreen(Screen):
         self._stop_playback()
 
     def _stop_playback(self) -> None:
-        """Stop the frame pump and mpv. Idempotent; safe from any context."""
+        """Stop the render timer, frame pump, and mpv. Idempotent; any context."""
         self._stop = True
+        if self._render_timer is not None:
+            try:
+                self._render_timer.stop()
+            except Exception:
+                pass
+            self._render_timer = None
         engine, self.engine = self.engine, None
         if engine:
             threading.Thread(target=engine.quit, daemon=True).start()
@@ -126,7 +151,7 @@ class PlayerScreen(Screen):
     # ----- engine lifecycle ---------------------------------------------
 
     def _start_engine(self) -> None:
-        engine = MpvEngine(self.video.watch_url, cookies=self.cookies)
+        engine = MpvEngine(self.video.watch_url, cookies=self.cookies, max_height=PLAYER_HEIGHT)
         try:
             engine.start()
         except Exception as exc:
@@ -148,39 +173,71 @@ class PlayerScreen(Screen):
         self._duration = float(self.engine.get("duration") or 0)
         self.query_one("#pl-title", Static).update(f"[b #ff8a8a]{_esc(self.video.title)}[/]")
         self.query_one("#pl-pause", Button).label = "⏸"
-        threading.Thread(target=self._pump, daemon=True).start()
+        # Capture runs on a daemon thread; the UI renders the latest frame on a
+        # steady Textual timer so cadence is even and slow frames are dropped.
+        threading.Thread(target=self._capture, daemon=True).start()
+        self._render_timer = self.set_interval(1.0 / PLAYER_FPS, self._render_tick)
 
-    def _pump(self) -> None:
+    def _capture(self) -> None:
         self._pump_running = True
         try:
-            self._pump_loop()
+            self._capture_loop()
         finally:
             self._pump_running = False
 
-    def _pump_loop(self) -> None:
-        period = 1.0 / FRAME_FPS
+    def _capture_loop(self) -> None:
+        period = 1.0 / PLAYER_FPS
         while not self._stop and self.engine and self.engine.is_alive():
             t0 = time.time()
+            paused = False
             try:
-                path = self.engine.screenshot()
-                img = PILImage.open(path)
-                img.load()
-                if img.width > FRAME_MAX_WIDTH:
-                    h = int(FRAME_MAX_WIDTH * img.height / img.width)
-                    img = img.resize((FRAME_MAX_WIDTH, h))
-                self._safe_call(self._set_frame, img)
-            except Exception:
-                pass
-            try:
-                tp = self.engine.get("time-pos") or 0.0
                 paused = bool(self.engine.get("pause"))
-                vol = self.engine.get("volume")
-                self._safe_call(self._update_controls, tp, paused, vol)
+                self._props = {
+                    "time-pos": self.engine.get("time-pos") or 0.0,
+                    "pause": paused,
+                    "volume": self.engine.get("volume"),
+                }
             except Exception:
                 pass
+            # A paused frame never changes — skip the screenshot + re-render.
+            if not paused:
+                try:
+                    path = self.engine.screenshot()
+                    img = PILImage.open(path)
+                    img.load()
+                    if img.width > DISPLAY_WIDTH:
+                        h = int(DISPLAY_WIDTH * img.height / img.width)
+                        img = img.resize((DISPLAY_WIDTH, h))
+                    self._latest = img  # atomic publish; render timer picks it up
+                except Exception:
+                    pass
             time.sleep(max(0.0, period - (time.time() - t0)))
         if not self._stop:
             self._safe_call(self._schedule_close)  # reached EOF
+
+    def _render_tick(self) -> None:
+        """Runs on the UI thread on a fixed interval; shows the latest frame."""
+        img = self._latest
+        if img is not None and img is not self._shown:
+            self._shown = img
+            try:
+                self.query_one("#pl-video", Image).image = img
+            except Exception:
+                pass
+        if self._props:
+            self._apply_controls(self._props)
+
+    def _apply_controls(self, props: dict) -> None:
+        dur = self._duration or 1
+        time_pos = props.get("time-pos") or 0.0
+        self.query_one("#pl-seek", ClickBar).set_fraction(time_pos / dur)
+        self.query_one("#pl-time", Label).update(
+            f"{human_duration(int(time_pos))} / {human_duration(int(self._duration))}"
+        )
+        self.query_one("#pl-pause", Button).label = "▶" if props.get("pause") else "⏸"
+        vol = props.get("volume")
+        if vol is not None:
+            self.query_one("#pl-vol", ClickBar).set_fraction(float(vol) / 130)
 
     def _safe_call(self, fn, *args) -> None:
         """Marshal a call onto the UI thread, ignoring a shutting-down app."""
@@ -188,22 +245,6 @@ class PlayerScreen(Screen):
             self.app.call_from_thread(fn, *args)
         except Exception:
             pass
-
-    def _set_frame(self, img: PILImage.Image) -> None:
-        try:
-            self.query_one("#pl-video", Image).image = img
-        except Exception:
-            pass
-
-    def _update_controls(self, time_pos: float, paused: bool, volume) -> None:
-        dur = self._duration or 1
-        self.query_one("#pl-seek", ClickBar).set_fraction(time_pos / dur)
-        self.query_one("#pl-time", Label).update(
-            f"{human_duration(int(time_pos))} / {human_duration(int(self._duration))}"
-        )
-        self.query_one("#pl-pause", Button).label = "▶" if paused else "⏸"
-        if volume is not None:
-            self.query_one("#pl-vol", ClickBar).set_fraction(float(volume) / 130)
 
     # ----- actions -------------------------------------------------------
 

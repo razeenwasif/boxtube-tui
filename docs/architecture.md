@@ -142,20 +142,27 @@ than suspending the TUI and handing the terminal to mpv:
 
 ```
 PlayerScreen.on_mount
-   └─ daemon thread: MpvEngine.start()       mpv --vo=null --ao=null
+   └─ daemon thread: MpvEngine.start()        mpv --vo=null --ao=null
                                               --input-ipc-server=<sock>  (headless)
-   └─ daemon thread: frame pump (~12 fps)
-        every tick:  engine.screenshot()  →  read JPEG  →  Image widget
-                     engine.get(time-pos/pause/volume) → control bar
+   └─ daemon thread: capture loop (BOXTUBE_PLAYER_FPS)
+        if not paused: engine.screenshot() → read JPEG → resize → self._latest
+        always:        engine.get(time-pos/pause/volume) → self._props
+   └─ UI timer: render tick (BOXTUBE_PLAYER_FPS)
+        latest frame (if changed) → Image widget;  props → control bar
    user input (mouse/keys) → engine.seek / cycle pause / set volume  (over IPC)
 ```
 
 - **mpv is the single A/V engine and master clock.** It decodes audio + video
   headless; BoxTube samples the *current* frame with `screenshot-to-file … video`,
   so frames are inherently in sync with the audio (no second decoder).
-- **Threads, not workers.** The engine start and frame pump run on plain *daemon*
+- **Decoupled capture and render.** A daemon thread captures into a shared
+  "latest frame" slot; a Textual interval timer renders the latest frame on the UI
+  thread at a steady rate, **dropping stale frames**. This smooths the jitter from
+  mpv's variable screenshot latency, and renders only when the frame changed
+  (so a paused video — which also stops capture — costs nothing).
+- **Threads, not workers.** The engine start and capture loop run on plain *daemon*
   threads. Textual's shutdown awaits `@work` workers, which would deadlock against
-  an infinite pump; daemon threads are not awaited and poll a `_stop` flag. They
+  an infinite loop; daemon threads are not awaited and poll a `_stop` flag. They
   marshal UI updates with `call_from_thread`.
 - **Closing** awaits `pop_screen()` (an un-awaited pop stalls app shutdown) after
   the pump has wound down and mpv has quit. Avoid shadowing Textual
