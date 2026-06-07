@@ -29,6 +29,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Auto-detects a local JavaScript runtime (`deno`/`bun`/`node`/`qjs`, Linux-native)
   and passes it to yt-dlp as `--js-runtimes` during playback. Override or disable
   with `BOXTUBE_JS_RUNTIME`.
+- Hardware video decoding via mpv `--hwdec` (`BOXTUBE_HWDEC`, default `auto-safe`).
+- Bounded LRU thumbnail cache (`BOXTUBE_THUMB_CACHE_SIZE`, default 64).
 - `docs/accounts.md` sign-in guide; `tests/test_account.py`; expanded tests.
 - Comprehensive documentation set under `docs/` (installation, usage,
   configuration, architecture, troubleshooting, development).

@@ -67,9 +67,14 @@ What's covered:
 
 | File | Focus |
 |------|-------|
-| `tests/test_youtube.py` | Formatting helpers, `Video` properties, `find_ytdlp`, search JSON parsing (mocked subprocess) |
-| `tests/test_player.py` | `detect_vo` across terminals, `build_command` structure |
-| `tests/test_app.py` | Headless UI: boot, populate, highlight navigation, details rendering, thumbnail stale-guard |
+| `tests/test_youtube.py` | Formatting helpers, `Video`/`Playlist`, `find_ytdlp`/`find_js_runtime`, search & feed parsing (mocked subprocess) |
+| `tests/test_account.py` | Cookies path resolution and sign-in detection |
+| `tests/test_player.py` | `detect_vo`/`detect_hwdec`, `build_command` structure |
+| `tests/test_engine.py` | `MpvEngine` IPC request/response + controls (fake socket) |
+| `tests/test_player_screen.py` | `ClickBar` + player screen control flow (fake engine) |
+| `tests/test_thumbnails.py` | Thumbnail LRU cache behavior |
+| `tests/test_opener.py` | Browser opening, including the WSL path |
+| `tests/test_app.py` | Headless UI: boot, nav, populate, drill-down, cookie-trouble, thumbnail stale-guard |
 
 A handful of tests are marked `@pytest.mark.network` and hit YouTube; they're for
 manual verification and can be deselected:

@@ -134,22 +134,11 @@ you navigate again, and the `_current_video_id` guard ensures a slow download fo
 a previous row can never overwrite the current preview — eliminating flicker and
 races during fast scrolling.
 
-### Playback
+### Playback — custom player (engine + screen)
 
-```
-Enter / p on a row → _watch(video)
-        │  guard: mpv installed?
-        │  pick vo = detect_vo()
-        ▼
-with app.suspend():            Textual releases the terminal
-        player.play(url, vo)   subprocess.run(mpv … url), blocks until exit
-        ▼
-(resume) refocus results
-```
-
-### Custom player (engine + screen)
-
-Playback is a dedicated `PlayerScreen` rather than handing the terminal to mpv:
+`Enter`/`p` on a row → `_watch(video)` (guards that mpv is installed) →
+`push_screen(PlayerScreen(video))`. Playback is a dedicated `PlayerScreen` rather
+than suspending the TUI and handing the terminal to mpv:
 
 ```
 PlayerScreen.on_mount
@@ -187,8 +176,9 @@ happen there. BoxTube pushes blocking work off that thread:
   `self.call_from_thread(...)` to run UI updates back on the event loop.
 - **Exclusivity** — `exclusive=True` with a `group` name means a newer task in the
   same group cancels the older one (latest search/thumbnail wins).
-- **Playback** is intentionally *synchronous and blocking* inside
-  `app.suspend()`: while a video plays, the TUI should be paused anyway.
+- **Playback** runs on dedicated *daemon* threads (the engine start and frame
+  pump), marshalling UI updates with `call_from_thread` — see the custom-player
+  notes above.
 
 ## Rendering & graphics
 
@@ -213,7 +203,8 @@ happen there. BoxTube pushes blocking work off that thread:
   multiple terminal video backends, instead of reimplementing decoding/rendering.
 - **Flat-playlist search** — trades richer per-result metadata for speed; full
   details (and the stream) are resolved lazily only when needed.
-- **Suspend-and-run playback** — simpler and more robust than embedding video in a
-  widget, and gives the sharpest output since mpv drives the terminal directly.
-- **In-memory thumbnail cache** — session-scoped, bounded by what you browse; no
-  disk cache to manage or invalidate.
+- **Headless mpv + frame sampling** — keeping mpv as the single A/V engine (and
+  sampling its current frame) gives free audio sync and lets BoxTube draw its own
+  crisp, mouse-driven controls, at the cost of a modest sampled framerate.
+- **In-memory thumbnail cache** — session-scoped LRU (`BOXTUBE_THUMB_CACHE_SIZE`),
+  bounded by what you browse; no disk cache to manage or invalidate.

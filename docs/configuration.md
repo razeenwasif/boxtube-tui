@@ -11,6 +11,8 @@ knobs that exist are documented here.
 | `BOXTUBE_COOKIES` | Path to a cookies.txt | `~/.config/boxtube/cookies.txt` | Where BoxTube reads your YouTube cookies for personalized feeds |
 | `BOXTUBE_JS_RUNTIME` | Runtime spec, e.g. `deno`, `node:/opt/node/bin`, or empty | auto-detected | JS runtime passed to yt-dlp; empty disables auto-detection |
 | `BOXTUBE_PLAYBACK_COOKIES` | any non-empty value | unset (off) | Send your cookies to mpv during playback (needed for private/members-only videos; breaks normal playback unless a full JS solver is set up) |
+| `BOXTUBE_HWDEC` | mpv `--hwdec` mode, or empty | `auto-safe` | Hardware video decoding mode passed to mpv; empty omits the option |
+| `BOXTUBE_THUMB_CACHE_SIZE` | integer | `64` | Max thumbnails kept in the in-memory LRU cache (`0` disables caching) |
 | `XDG_CONFIG_HOME` | Path | `~/.config` | Base dir for the default cookies path |
 
 ### Sign-in / cookies (`BOXTUBE_COOKIES`)
