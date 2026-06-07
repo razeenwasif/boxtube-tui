@@ -10,6 +10,7 @@ highlighted video's details. Personalized feeds use a cookies file for sign-in
 from __future__ import annotations
 
 import os
+import time
 
 from textual import work
 from textual.app import App, ComposeResult
@@ -203,6 +204,7 @@ class BoxTube(App[None]):
         self._cards: list[Card] = []
         self._cols: int = 1
         self._focused_item = None
+        self._thumbs_loaded: set[str] = set()
 
     # ----- layout --------------------------------------------------------
 
@@ -333,6 +335,13 @@ class BoxTube(App[None]):
         if 0 <= target < len(cards):
             cards[target].focus()
             cards[target].scroll_visible()
+            self._load_visible_thumbnails()  # newly-revealed cards
+
+    def on_mouse_scroll_down(self, event) -> None:
+        self._load_visible_thumbnails()
+
+    def on_mouse_scroll_up(self, event) -> None:
+        self._load_visible_thumbnails()
 
     # ----- loading (workers) ---------------------------------------------
 
@@ -410,15 +419,55 @@ class BoxTube(App[None]):
             return
         self.call_from_thread(self._populate_videos, videos, f"Search: {query}")
 
-    @work(thread=True, exclusive=True, group="grid-thumbs")
-    def _load_grid_thumbnails(self, cards: list[VideoCard]) -> None:
-        for card in cards:
-            video = card.item
-            try:
-                image = thumbnails.fetch(video.id, video.thumbnail_url)
-            except Exception:
+    def _visible_unloaded_cards(self) -> list[VideoCard]:
+        """Video cards whose thumbnail isn't loaded yet and that are on (or near)
+        screen — within one viewport above/below for light pre-loading."""
+        try:
+            viewport = self.query_one("#grid").region
+        except Exception:
+            return []
+        if not viewport.height:
+            return []
+        # Strictly visible plus a small buffer below the fold (preload the next
+        # few rows). Document order means visible cards load first.
+        top = viewport.y - 2
+        bottom = viewport.bottom + 8
+        cards: list[VideoCard] = []
+        for card in self._cards:
+            if not isinstance(card, VideoCard) or card.item.id in self._thumbs_loaded:
                 continue
-            self.call_from_thread(self._apply_card_thumb, card, image)
+            r = card.region
+            if r.height and r.bottom > top and r.y < bottom:
+                cards.append(card)
+        return cards
+
+    def _grid_layout_ready(self) -> bool:
+        return bool(self._cards) and self._cards[0].region.height > 0
+
+    @work(thread=True, exclusive=True, group="grid-thumbs")
+    def _load_visible_thumbnails(self) -> None:
+        # Only fetch/render thumbnails for cards in view (re-scanning so scrolling
+        # mid-load picks up newly-revealed cards). Avoids loading dozens of
+        # off-screen images up front. Wait for layout so card regions are known.
+        waits = 0
+        while not self.call_from_thread(self._grid_layout_ready):
+            if waits >= 20:
+                return
+            waits += 1
+            time.sleep(0.05)
+        while True:
+            cards = self.call_from_thread(self._visible_unloaded_cards)
+            if not cards:
+                return
+            for card in cards:
+                video = card.item
+                try:
+                    image = thumbnails.fetch(video.id, video.thumbnail_url)
+                except Exception:
+                    self._thumbs_loaded.add(video.id)  # don't retry a hard failure
+                    continue
+                self._thumbs_loaded.add(video.id)
+                self.call_from_thread(self._apply_card_thumb, card, image)
 
     def _apply_card_thumb(self, card: VideoCard, image) -> None:
         try:
@@ -462,6 +511,7 @@ class BoxTube(App[None]):
         grid.remove_children()
         self._cards = cards
         self._focused_item = None
+        self._thumbs_loaded = set()
         if cards:
             grid.mount(*cards)
             self._set_results_title(f"{title} ({len(cards)})")
@@ -479,9 +529,7 @@ class BoxTube(App[None]):
         self._cols = self._compute_cols()
         self.query_one("#grid-inner", Grid).styles.grid_size_columns = self._cols
         self._cards[0].focus()
-        video_cards = [c for c in self._cards if isinstance(c, VideoCard)]
-        if video_cards:
-            self._load_grid_thumbnails(video_cards)
+        self._load_visible_thumbnails()
 
     def _set_results_title(self, title: str) -> None:
         self.query_one("#grid").border_title = title

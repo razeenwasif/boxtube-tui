@@ -77,8 +77,14 @@ Videos render in a **responsive thumbnail grid** of focusable `VideoCard`s (a
 Textual `Grid` whose column count is computed from the pane width and reset on
 resize). Each card posts `CardSelected` on focus (→ update the preview) and
 `CardActivated` on double-click (→ play); arrow keys move focus through the grid.
-A single background worker fills card thumbnails sequentially (cached), so a
-populate doesn't spawn dozens of threads.
+
+Thumbnails load **lazily, visible-first**: one background worker fetches/renders
+only the cards whose region is on screen (plus a small buffer below the fold,
+computed in `_visible_unloaded_cards`), re-scanning as you scroll or navigate
+(triggered from grid moves and mouse scroll). Off-screen cards aren't fetched
+until revealed, so a 40-item feed loads ~a screenful up front instead of all 40.
+Loaded ids are tracked in `_thumbs_loaded`; results are cached
+(`thumbnails`' LRU).
 
 ## UI composition
 

@@ -147,6 +147,21 @@ def test_navigation_updates_current(sample_videos):
     run(go())
 
 
+def test_grid_lazy_loads_only_visible_cards():
+    async def go():
+        app = BoxTube()
+        async with app.run_test(size=(120, 30)) as pilot:
+            vids = [Video(id=str(i), title=f"T{i}", channel="c", duration=1, views=1) for i in range(40)]
+            app._populate_videos(vids, "Home")
+            await pilot.pause()
+            await pilot.pause()
+            visible = app._visible_unloaded_cards()
+            # Only on-screen cards (+ a small buffer) — not all 40.
+            assert 0 < len(visible) < len(vids)
+
+    run(go())
+
+
 def test_select_nav_sets_source():
     async def go():
         app = BoxTube()

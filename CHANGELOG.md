@@ -58,6 +58,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   latency. Capture is skipped while paused, frames are smaller (≤360p, 480px
   wide), and re-renders are suppressed when the frame is unchanged. Tunable via
   `BOXTUBE_PLAYER_FPS` and `BOXTUBE_PLAYER_HEIGHT`.
+- **Grid performance**: thumbnails now load lazily and visible-first — only cards
+  on screen (plus a small buffer) are fetched/rendered, re-scanning as you scroll,
+  so a feed no longer loads every off-screen thumbnail up front.
 
 ### Fixed
 - Playback no longer silently fails when signed in. Sending cookies to mpv broke
