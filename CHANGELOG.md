@@ -19,6 +19,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - New keybindings: `1`–`5` (jump to tab), `r` (refresh), `?` (sign-in help),
   `Backspace` (back).
 - Cookies are passed to mpv during playback so age-restricted/private videos play.
+- Auto-detects a local JavaScript runtime (`deno`/`bun`/`node`/`qjs`, Linux-native)
+  and passes it to yt-dlp as `--js-runtimes` during playback. Override or disable
+  with `BOXTUBE_JS_RUNTIME`.
 - `docs/accounts.md` sign-in guide; `tests/test_account.py`; expanded tests.
 - Comprehensive documentation set under `docs/` (installation, usage,
   configuration, architecture, troubleshooting, development).

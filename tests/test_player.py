@@ -71,6 +71,22 @@ def test_build_command_core(monkeypatch):
     assert "--profile=sw-fast" not in cmd
 
 
+def test_build_command_includes_js_runtime(monkeypatch):
+    monkeypatch.setattr(player, "find_ytdlp", lambda: "/opt/yt-dlp")
+    monkeypatch.setattr(player, "find_js_runtime", lambda: "deno")
+    monkeypatch.setattr(player, "mpv_path", lambda: "/usr/bin/mpv")
+    cmd = player.build_command("url", vo="kitty")
+    assert "--ytdl-raw-options-append=js-runtimes=deno" in cmd
+
+
+def test_build_command_no_js_runtime(monkeypatch):
+    monkeypatch.setattr(player, "find_ytdlp", lambda: "/opt/yt-dlp")
+    monkeypatch.setattr(player, "find_js_runtime", lambda: None)
+    monkeypatch.setattr(player, "mpv_path", lambda: "/usr/bin/mpv")
+    cmd = player.build_command("url", vo="kitty")
+    assert not any("js-runtimes" in c for c in cmd)
+
+
 def test_build_command_includes_cookies(monkeypatch):
     monkeypatch.setattr(player, "find_ytdlp", lambda: "/opt/yt-dlp")
     monkeypatch.setattr(player, "mpv_path", lambda: "/usr/bin/mpv")

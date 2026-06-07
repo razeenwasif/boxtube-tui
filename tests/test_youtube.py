@@ -167,6 +167,35 @@ def test_search_builds_expected_command(monkeypatch):
     assert "--dump-json" in captured["cmd"]
 
 
+# ----- find_js_runtime ---------------------------------------------------
+
+
+def test_find_js_runtime_prefers_native(monkeypatch):
+    monkeypatch.delenv("BOXTUBE_JS_RUNTIME", raising=False)
+    table = {"deno": None, "bun": "/home/u/.bun/bin/bun", "node": "/usr/bin/node"}
+    monkeypatch.setattr(youtube.shutil, "which", lambda name: table.get(name))
+    assert youtube.find_js_runtime() == "bun"
+
+
+def test_find_js_runtime_skips_windows_exe(monkeypatch):
+    monkeypatch.delenv("BOXTUBE_JS_RUNTIME", raising=False)
+    monkeypatch.setattr(
+        youtube.shutil, "which",
+        lambda name: "/mnt/c/Program Files/nodejs/node.exe" if name == "node" else None,
+    )
+    assert youtube.find_js_runtime() is None
+
+
+def test_find_js_runtime_override(monkeypatch):
+    monkeypatch.setenv("BOXTUBE_JS_RUNTIME", "deno:/opt/deno")
+    assert youtube.find_js_runtime() == "deno:/opt/deno"
+
+
+def test_find_js_runtime_disabled(monkeypatch):
+    monkeypatch.setenv("BOXTUBE_JS_RUNTIME", "")
+    assert youtube.find_js_runtime() is None
+
+
 # ----- Playlist model ----------------------------------------------------
 
 

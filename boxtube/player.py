@@ -21,7 +21,7 @@ import os
 import shutil
 import subprocess
 
-from .youtube import find_ytdlp
+from .youtube import find_js_runtime, find_ytdlp
 
 
 def detect_vo() -> str:
@@ -68,6 +68,12 @@ def build_command(url: str, vo: str | None = None, cookies: str | None = None) -
     ytdl = find_ytdlp()
     if ytdl:
         cmd.append(f"--script-opts=ytdl_hook-ytdl_path={ytdl}")
+
+    # Enable a JS runtime when one is available so yt-dlp can extract the full
+    # format set (complements the JS-free client fallback above).
+    js = find_js_runtime()
+    if js:
+        cmd.append(f"--ytdl-raw-options-append=js-runtimes={js}")
 
     # Pass cookies to yt-dlp's hook so private / age-restricted videos play.
     if cookies:

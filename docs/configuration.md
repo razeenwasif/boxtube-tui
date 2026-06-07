@@ -9,6 +9,7 @@ knobs that exist are documented here.
 |----------|--------|---------|--------|
 | `BOXTUBE_VO` | `kitty`, `sixel`, `tct`, or any valid mpv `--vo` | auto-detected | Forces the mpv video output used for playback |
 | `BOXTUBE_COOKIES` | Path to a cookies.txt | `~/.config/boxtube/cookies.txt` | Where BoxTube reads your YouTube cookies for personalized feeds |
+| `BOXTUBE_JS_RUNTIME` | Runtime spec, e.g. `deno`, `node:/opt/node/bin`, or empty | auto-detected | JS runtime passed to yt-dlp; empty disables auto-detection |
 | `XDG_CONFIG_HOME` | Path | `~/.config` | Base dir for the default cookies path |
 
 ### Sign-in / cookies (`BOXTUBE_COOKIES`)
@@ -24,6 +25,27 @@ BOXTUBE_COOKIES=/secure/yt-cookies.txt boxtube
 
 See the [accounts guide](accounts.md) for how to export the file. Search works
 without it.
+
+### JavaScript runtime (`BOXTUBE_JS_RUNTIME`)
+
+Recent yt-dlp uses a JavaScript runtime to solve YouTube's challenges and expose
+the full set of formats. During playback BoxTube **auto-detects** a locally
+installed, Linux-native runtime — it looks for `deno`, `bun`, `node`, then `qjs`
+(skipping Windows `.exe`s under `/mnt` on WSL) — and passes it to yt-dlp as
+`--js-runtimes`. This complements the JS-free `android_vr`/`tv` client fallback,
+so playback works with or without a runtime.
+
+Override or disable detection:
+
+```bash
+BOXTUBE_JS_RUNTIME=deno boxtube          # force a specific runtime
+BOXTUBE_JS_RUNTIME=node:/opt/node/bin    # ... with an explicit location
+BOXTUBE_JS_RUNTIME= boxtube              # disable (empty value)
+```
+
+> To let the runtime fully solve challenges, yt-dlp may also need its EJS solver
+> script. That involves a remote download and is left opt-in — see
+> [troubleshooting](troubleshooting.md#playback-fails-requested-format-is-not-available).
 
 ### Video output (`BOXTUBE_VO`)
 

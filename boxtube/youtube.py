@@ -121,6 +121,29 @@ def ytdlp_path() -> str:
     return exe
 
 
+# Preferred order; deno is yt-dlp's best-supported runtime.
+_JS_RUNTIMES = ("deno", "bun", "node", "qjs")
+
+
+def find_js_runtime() -> str | None:
+    """Return a JavaScript runtime spec for yt-dlp's ``--js-runtimes``, or None.
+
+    Recent yt-dlp uses a JS runtime to solve YouTube's challenges and surface the
+    full set of formats. We auto-detect a locally installed, *Linux-native*
+    runtime (a Windows ``.exe`` under ``/mnt`` won't work as yt-dlp's runtime).
+
+    Override with ``BOXTUBE_JS_RUNTIME`` — set it to a spec like ``deno`` or
+    ``node:/opt/node/bin``, or to an empty value to disable auto-detection.
+    """
+    if "BOXTUBE_JS_RUNTIME" in os.environ:
+        return os.environ["BOXTUBE_JS_RUNTIME"].strip() or None
+    for name in _JS_RUNTIMES:
+        path = shutil.which(name)
+        if path and not path.startswith("/mnt/"):
+            return name
+    return None
+
+
 # ----- internal runner ---------------------------------------------------
 
 

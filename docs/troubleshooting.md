@@ -42,12 +42,21 @@ JS-free `android_vr`/`tv` clients (`--ytdl-raw-options-append=extractor-args=...
 in `player.py`) and by ending the format chain with an uncapped fallback, so this
 should not happen.
 
+BoxTube also auto-detects a local JS runtime (`deno`/`bun`/`node`/`qjs`) and
+passes it to yt-dlp as `--js-runtimes` during playback — see
+[configuration](configuration.md#javascript-runtime-boxtube_js_runtime).
+
 If you still hit it:
 
 - Update yt-dlp: `.venv/bin/pip install -U yt-dlp` (or `make update-ytdlp`).
-- Optionally install a JS runtime so the default client works too — yt-dlp
-  supports [deno](https://deno.com/); or point it at an existing runtime, e.g.
-  `node`/`bun`, with `--js-runtimes`.
+- Install a JS runtime if you don't have one — yt-dlp recommends
+  [deno](https://deno.com/). BoxTube will pick it up automatically (or set
+  `BOXTUBE_JS_RUNTIME`).
+- For yt-dlp to *fully* solve JS challenges, the runtime needs its EJS solver
+  script, which yt-dlp downloads on demand. That's a remote fetch BoxTube does
+  **not** enable for you; to opt in, run a one-off yt-dlp command with
+  `--remote-components ejs:github` (see the
+  [yt-dlp EJS wiki](https://github.com/yt-dlp/yt-dlp/wiki/EJS)).
 
 ## "open in browser" does nothing / xdg-open errors (WSL)
 
