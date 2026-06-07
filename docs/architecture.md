@@ -36,7 +36,9 @@ persistent state beyond an in-memory thumbnail cache for the session.
 | `boxtube/youtube.py` | Search & personalized feeds via `yt-dlp`; binary discovery; models & formatting | `search()`, `videos_for_feed()`, `user_playlists()`, `Video`, `Playlist`, `find_ytdlp()` |
 | `boxtube/account.py` | Sign-in state from a cookies file | `is_signed_in()`, `cookies_arg()`, `cookies_path()` |
 | `boxtube/thumbnails.py` | Download + cache thumbnails as PIL images | `fetch()`, `placeholder()` |
-| `boxtube/player.py` | Build & run the mpv command; choose a video output | `play()`, `build_command()`, `detect_vo()`, `mpv_path()` |
+| `boxtube/engine.py` | Headless mpv A/V engine controlled over the JSON IPC socket | `MpvEngine` (`start`, `get`/`set`, `seek`, `screenshot`, `quit`) |
+| `boxtube/player_screen.py` | Custom player UI: frame pump + mouse-driven control bar | `PlayerScreen`, `ClickBar` |
+| `boxtube/player.py` | mpv video-output / hwdec detection (used by the engine) | `detect_vo()`, `detect_hwdec()`, `mpv_path()` |
 | `boxtube/opener.py` | Open links in a browser (WSL-aware) | `open_url()`, `is_wsl()` |
 | `boxtube/boxtube.tcss` | Theme: colors, borders, layout | (Textual CSS) |
 | `boxtube/__main__.py` | `python -m boxtube` entry | delegates to `app.main` |
@@ -145,10 +147,34 @@ with app.suspend():            Textual releases the terminal
 (resume) refocus results
 ```
 
-mpv resolves the YouTube stream itself through its bundled *ytdl hook*, which
-shells out to `yt-dlp`. BoxTube points the hook at the venv `yt-dlp`
-(`--script-opts=ytdl_hook-ytdl_path=…`) so playback never uses a stale system
-binary. The TUI is suspended for the duration so mpv owns the terminal.
+### Custom player (engine + screen)
+
+Playback is a dedicated `PlayerScreen` rather than handing the terminal to mpv:
+
+```
+PlayerScreen.on_mount
+   └─ daemon thread: MpvEngine.start()       mpv --vo=null --ao=null
+                                              --input-ipc-server=<sock>  (headless)
+   └─ daemon thread: frame pump (~12 fps)
+        every tick:  engine.screenshot()  →  read JPEG  →  Image widget
+                     engine.get(time-pos/pause/volume) → control bar
+   user input (mouse/keys) → engine.seek / cycle pause / set volume  (over IPC)
+```
+
+- **mpv is the single A/V engine and master clock.** It decodes audio + video
+  headless; BoxTube samples the *current* frame with `screenshot-to-file … video`,
+  so frames are inherently in sync with the audio (no second decoder).
+- **Threads, not workers.** The engine start and frame pump run on plain *daemon*
+  threads. Textual's shutdown awaits `@work` workers, which would deadlock against
+  an infinite pump; daemon threads are not awaited and poll a `_stop` flag. They
+  marshal UI updates with `call_from_thread`.
+- **Closing** awaits `pop_screen()` (an un-awaited pop stalls app shutdown) after
+  the pump has wound down and mpv has quit. Avoid shadowing Textual
+  `MessagePump` internals (e.g. `_closing`, `_running`) on the screen.
+
+mpv resolves the YouTube stream through its bundled *ytdl hook*, pointed at the
+venv `yt-dlp` (`--script-opts=ytdl_hook-ytdl_path=…`) so playback never uses a
+stale system binary.
 
 ## Threading model
 

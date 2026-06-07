@@ -162,6 +162,81 @@ ListView#results:focus > PlaylistItem.-highlight .title {
     width: 1fr;
 }
 
+/* ----- player screen ----------------------------------------------- */
+
+PlayerScreen {
+    background: #000000;
+}
+
+#pl-title {
+    dock: top;
+    height: 1;
+    padding: 0 2;
+    background: #16161b;
+    color: #f2f2f4;
+    content-align: left middle;
+}
+
+#pl-stage {
+    width: 1fr;
+    height: 1fr;
+    background: #000000;
+    align: center middle;
+}
+
+#pl-video {
+    width: auto;
+    height: 1fr;
+}
+
+#pl-controls {
+    dock: bottom;
+    height: 3;
+    background: #16161b;
+    padding: 0 1;
+    align: left middle;
+}
+
+#pl-controls Button {
+    min-width: 5;
+    width: 5;
+    height: 3;
+    border: none;
+    background: #16161b;
+    color: #e8e8ea;
+}
+
+#pl-controls Button:hover {
+    background: #ff6b6b 25%;
+    color: #ffffff;
+}
+
+#pl-time {
+    width: auto;
+    height: 3;
+    content-align: center middle;
+    padding: 0 2;
+    color: #a8a8b2;
+}
+
+#pl-seek {
+    width: 1fr;
+    height: 1;
+    margin: 1 2;
+}
+
+#pl-volicon {
+    width: 3;
+    height: 3;
+    content-align: center middle;
+}
+
+#pl-vol {
+    width: 10;
+    height: 1;
+    margin: 1 1;
+}
+
 /* ----- footer ------------------------------------------------------ */
 
 Footer {

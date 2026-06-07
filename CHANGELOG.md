@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Custom in-terminal video player** with mouse-driven controls. mpv now runs
+  headless as an A/V engine controlled over its JSON IPC socket; BoxTube samples
+  the current frame into a Textual `Image` widget and draws its own crisp control
+  bar — play/pause, skip ±5s, a clickable seek bar, volume bar, and time — all
+  mouse-clickable, plus keyboard shortcuts (space, ←/→, ↑/↓, q). New modules
+  `boxtube/engine.py` (mpv IPC) and `boxtube/player_screen.py` (the player UI).
+  Playback no longer takes over the terminal via suspend.
 - **YouTube-like layout**: a three-pane UI with a left Library nav (Home,
   History, Liked, Watch Later, Playlists), results list, and preview pane.
 - **Sign-in via a cookies file** (`boxtube/account.py`): browse your

@@ -82,23 +82,25 @@ press `?` any time for them, and `r` to refresh once you've added cookies.
 ### Watch in the terminal
 
 1. Highlight a video and press **Enter** (or `p`).
-2. BoxTube suspends and hands the terminal to mpv, which streams the video
-   **inside the terminal**.
-3. Press `q` in mpv to return.
+2. BoxTube opens its **custom player**: the video renders in the terminal with a
+   control bar you can click. mpv runs in the background as the A/V engine.
+3. Press **`q`** (or click **✕**) to close and return.
 
-While mpv is playing:
+The control bar is fully mouse-driven, with keyboard shortcuts too:
 
-| Key | Action |
-|-----|--------|
-| `q` | Quit playback, return to BoxTube |
-| `Space` | Pause / resume |
-| `←` / `→` | Seek backward / forward |
-| `9` / `0` | Volume down / up |
-| `f` | Fullscreen (graphics terminals) |
+| Control | Mouse | Key |
+|---------|-------|-----|
+| Play / pause | click ▶/⏸ | `Space` |
+| Skip back / forward 5s | click ⏮ / ⏭ | `←` / `→` |
+| Seek to a position | click anywhere on the seek bar | — |
+| Volume | click on the volume bar | `↑` / `↓` |
+| Close | click ✕ | `q` / `Esc` |
 
-When you're signed in, your cookies are passed to mpv too, so age-restricted and
-private videos play. Rendering quality depends on your terminal — see
+The video plays at ≤480p and is rendered with your terminal's graphics protocol
+(kitty / sixel) or a unicode fallback — see
 [configuration → video output](configuration.md#video-output-boxtube_vo).
+Age-restricted videos play without sign-in; for private/members-only videos see
+[`BOXTUBE_PLAYBACK_COOKIES`](configuration.md#playback-cookies-boxtube_playback_cookies).
 
 ### Open in a browser
 

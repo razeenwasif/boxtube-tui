@@ -10,6 +10,10 @@ outputs. We pick the best one available:
 Override at any time with the ``BOXTUBE_VO`` environment variable, e.g.
 ``BOXTUBE_VO=sixel boxtube``.
 
+Hardware video decoding is requested through mpv's ``--hwdec`` option. It
+defaults to ``auto-safe`` and can be changed with ``BOXTUBE_HWDEC``; set the
+variable to an empty value to omit the option.
+
 mpv resolves the YouTube stream itself via its bundled ytdl hook, which shells
 out to ``yt-dlp``. We point it explicitly at the discovered yt-dlp binary so it
 works regardless of how mpv was packaged.
@@ -46,8 +50,16 @@ def mpv_path() -> str | None:
     return shutil.which("mpv")
 
 
+def detect_hwdec() -> str | None:
+    """Return the mpv hardware decode mode to request, or None to omit it."""
+    if "BOXTUBE_HWDEC" in os.environ:
+        return os.environ["BOXTUBE_HWDEC"].strip() or None
+    return "auto-safe"
+
+
 def build_command(url: str, vo: str | None = None, cookies: str | None = None) -> list[str]:
     vo = vo or detect_vo()
+    hwdec = detect_hwdec()
     mpv = mpv_path() or "mpv"
     cmd = [
         mpv,
@@ -66,6 +78,8 @@ def build_command(url: str, vo: str | None = None, cookies: str | None = None) -
         # android_vr/tv clients need no JS and return full formats.
         "--ytdl-raw-options-append=extractor-args=youtube:player_client=default,android_vr,tv",
     ]
+    if hwdec:
+        cmd.append(f"--hwdec={hwdec}")
 
     ytdl = find_ytdlp()
     if ytdl:

@@ -48,9 +48,10 @@ using your terminal's native graphics protocol when available. No API key requir
 - **Sign in for your feed** — browse your subscriptions feed, watch history, liked
   videos, watch later, and playlists. Auth is via a browser-exported cookies file
   (no passwords). See the [accounts guide](docs/accounts.md).
-- **In-terminal playback** — videos play inside the terminal via mpv, using the
-  kitty graphics protocol, sixel, or a truecolor-text fallback depending on your
-  terminal.
+- **In-terminal playback with a custom player** — videos play inside the terminal
+  (mpv runs headless as the A/V engine) with BoxTube's own mouse-driven control
+  bar: play/pause, skip, a clickable seek bar, volume, and time. Renders via the
+  kitty graphics protocol, sixel, or a unicode fallback.
 - **Inline thumbnails** — the highlighted video's thumbnail renders in the
   preview pane, scaling with the window while preserving its 16:9 ratio.
 - **Real YouTube data** — powered by `yt-dlp`; no Google API key required.
@@ -117,7 +118,10 @@ BoxTube/
 │   ├── youtube.py           # yt-dlp search/feeds + binary discovery
 │   ├── account.py           # sign-in state via a cookies file
 │   ├── thumbnails.py        # background thumbnail fetch + cache
-│   ├── player.py            # mpv in-terminal playback
+│   ├── engine.py            # headless mpv A/V engine (JSON IPC)
+│   ├── player_screen.py     # custom player UI (frame pump + controls)
+│   ├── player.py            # mpv video-output / hwdec detection
+│   ├── opener.py            # WSL-aware browser opener
 │   ├── boxtube.tcss         # theme (light-red accent)
 │   └── __main__.py          # `python -m boxtube` entry point
 ├── docs/                    # documentation

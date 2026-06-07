@@ -18,6 +18,7 @@ from textual.widgets import Footer, Input, Label, ListItem, ListView, Static
 from textual_image.widget import Image
 
 from . import account, opener, player, thumbnails, youtube
+from .player_screen import PlayerScreen
 from .youtube import Playlist, SearchError, Video
 
 # Left-nav items: (key, icon, label). All require sign-in.
@@ -409,23 +410,11 @@ class BoxTube(App[None]):
                 timeout=8,
             )
             return
-        vo = player.detect_vo()
-        # Cookies break playback (they disable the JS-free clients), so don't
+        # Cookies break extraction (they disable the JS-free clients), so don't
         # send them by default. Age-restricted videos already play cookie-free.
-        # Power users who need private/members-only playback (and have a JS
-        # solver) can opt in with BOXTUBE_PLAYBACK_COOKIES=1.
+        # Opt in with BOXTUBE_PLAYBACK_COOKIES=1 for private/members-only videos.
         cookies = account.cookies_arg() if os.environ.get("BOXTUBE_PLAYBACK_COOKIES") else None
-        self.notify(f"Loading “{video.title}” (vo={vo})…  press q in mpv to return.")
-        with self.suspend():
-            print(f"\n▶  BoxTube — playing: {video.title}")
-            print(f"   {video.watch_url}   [video output: {vo}]")
-            print("   Controls:  q quit · space pause · ←/→ seek · 9/0 volume\n")
-            try:
-                player.play(video.watch_url, vo=vo, cookies=cookies)
-            except Exception as exc:  # pragma: no cover - defensive
-                print(f"\nPlayback error: {exc}")
-                input("Press Enter to return to BoxTube… ")
-        self.query_one("#results", ListView).focus()
+        self.push_screen(PlayerScreen(video, cookies=cookies))
 
     # ----- messages / help ----------------------------------------------
 

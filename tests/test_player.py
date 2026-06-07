@@ -52,6 +52,24 @@ def test_detect_vo_default_tct(monkeypatch):
     assert player.detect_vo() == "tct"
 
 
+# ----- detect_hwdec ------------------------------------------------------
+
+
+def test_detect_hwdec_default(monkeypatch):
+    monkeypatch.delenv("BOXTUBE_HWDEC", raising=False)
+    assert player.detect_hwdec() == "auto-safe"
+
+
+def test_detect_hwdec_override(monkeypatch):
+    monkeypatch.setenv("BOXTUBE_HWDEC", "vaapi")
+    assert player.detect_hwdec() == "vaapi"
+
+
+def test_detect_hwdec_disabled(monkeypatch):
+    monkeypatch.setenv("BOXTUBE_HWDEC", "")
+    assert player.detect_hwdec() is None
+
+
 # ----- build_command -----------------------------------------------------
 
 
@@ -65,6 +83,7 @@ def test_build_command_core(monkeypatch):
     assert cmd[-1] == "https://youtu.be/X"
     assert any(c.startswith("--ytdl-format=") for c in cmd)
     assert "--script-opts=ytdl_hook-ytdl_path=/opt/yt-dlp" in cmd
+    assert "--hwdec=auto-safe" in cmd
     # JS-free clients forced so extraction works without a JS runtime
     assert any("player_client=" in c and "android_vr" in c for c in cmd)
     # sw-fast profile is only for the text output
@@ -113,6 +132,14 @@ def test_build_command_tct_adds_swfast(monkeypatch):
     assert "--profile=sw-fast" in cmd
     # no yt-dlp found -> no script-opts entry
     assert not any("ytdl_path" in c for c in cmd)
+
+
+def test_build_command_omits_disabled_hwdec(monkeypatch):
+    monkeypatch.setenv("BOXTUBE_HWDEC", "")
+    monkeypatch.setattr(player, "find_ytdlp", lambda: None)
+    monkeypatch.setattr(player, "mpv_path", lambda: "/usr/bin/mpv")
+    cmd = player.build_command("url", vo="kitty")
+    assert not any(c.startswith("--hwdec=") for c in cmd)
 
 
 def test_play_raises_without_mpv(monkeypatch):
