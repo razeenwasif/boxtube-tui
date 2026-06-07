@@ -22,12 +22,20 @@ Search works **without** signing in.
 
 This method works everywhere, including **WSL** where your browser runs on Windows.
 
-1. In a browser **logged into YouTube**, install the
+1. Install the
    **[Get cookies.txt LOCALLY](https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc)**
    extension (Chrome/Edge/Firefox variants exist).
-2. Open <https://www.youtube.com> while logged in.
+2. Open a **private / incognito window**, log into YouTube there, and open a new
+   tab on <https://www.youtube.com>.
 3. Click the extension and **Export** (Netscape format). It downloads a
    `cookies.txt` (or `youtube.com_cookies.txt`).
+
+> **Use a private window and close it right after exporting.** Browsers
+> continuously rotate YouTube's session cookies; cookies exported from a window
+> you keep browsing in are often invalidated within minutes, which makes BoxTube
+> show empty feeds and "playlist does not exist" errors. A private window you
+> close immediately keeps the exported session valid. Make sure you're **fully
+> logged in** (you can see your avatar) before exporting.
 4. Move it to the expected path:
 
    ```bash
@@ -69,10 +77,24 @@ method above.)
 > neither recommendations nor watch history). BoxTube's Home is your
 > subscriptions feed, which is the closest reliable equivalent.
 
+## Symptoms of bad cookies
+
+If you're "signed in" but tabs are empty or error out, the cookies aren't
+authenticating. Tell-tale signs:
+
+- **Home / History show "This feed came back empty."**
+- **Liked / Watch Later report "playlist does not exist".**
+
+Both mean YouTube didn't accept the cookies — re-export them with the private
+window method above. (Technically: a valid export includes the first-party login
+cookies such as `SID`, `SAPISID`, `__Secure-1PSID`, and `LOGIN_INFO`; an export
+missing those won't authenticate.) BoxTube shows these re-export steps in-app when
+it detects the problem.
+
 ## Updating or signing out
 
 - **Cookies expire.** If personalized tabs start failing, re-export `cookies.txt`
-  and overwrite the file.
+  (private window) and overwrite the file, then press `r`.
 - **Sign out** by deleting the file:
 
   ```bash

@@ -35,6 +35,13 @@ SOURCE_TITLES = {
     "playlists": "Playlists",
 }
 
+# Sources that require a valid signed-in session.
+FEED_KEYS = {"home", "history", "liked", "watch_later", "playlists"}
+
+# Substrings in a yt-dlp error that indicate the cookies aren't authenticating.
+_AUTH_HINTS = ("does not exist", "sign in", "log in", "login", "private", "cookie",
+               "members-only", "unavailable", "not available on this app")
+
 
 class NavItem(ListItem):
     """A row in the left Library nav."""
@@ -250,7 +257,11 @@ class BoxTube(App[None]):
             self._show_details(videos[0])
         else:
             self._set_results_title(title)
-            self._show_message("Nothing to show", "This list is empty.")
+            if account.is_signed_in() and self._current_source in FEED_KEYS:
+                # Signed in but a feed came back empty — almost always bad cookies.
+                self._show_cookie_trouble("This feed came back empty.")
+            else:
+                self._show_message("Nothing to show", "This list is empty.")
 
     def _populate_playlists(self, playlists: list[Playlist], title: str) -> None:
         results = self.query_one("#results", ListView)
@@ -275,6 +286,10 @@ class BoxTube(App[None]):
         if not account.is_signed_in():
             self._set_results_title("Sign in required")
             self._show_signin_help()
+        elif any(hint in message.lower() for hint in _AUTH_HINTS):
+            # Signed in, but YouTube rejected the request — stale/incomplete cookies.
+            self._set_results_title("Sign-in problem")
+            self._show_cookie_trouble(message)
         else:
             self._set_results_title("Couldn't load")
             self._show_message("Couldn't load", message)
@@ -419,6 +434,28 @@ class BoxTube(App[None]):
         self.query_one("#thumb", Image).image = thumbnails.placeholder()
         self.query_one("#meta", Static).update(f"[b #ff8a8a]{_escape(title)}[/]")
         self.query_one("#desc", Static).update(f"[#a8a8b2]{_escape(body)}[/]")
+
+    def _show_cookie_trouble(self, detail: str = "") -> None:
+        path = account.cookies_path()
+        self._current_video_id = None
+        self.query_one("#thumb", Image).image = thumbnails.placeholder()
+        self.query_one("#meta", Static).update(
+            "[b #ff8a8a]Your sign-in isn't working[/]\n\n"
+            + (f"[#8a8a94]{_escape(detail)}[/]\n\n" if detail else "")
+            + "[#a8a8b2]YouTube didn't accept your cookies, so your feeds look\n"
+            "empty. This usually means they're expired or incomplete.[/]"
+        )
+        self.query_one("#desc", Static).update(
+            "[#a8a8b2][b]Fix: re-export your cookies[/b]\n"
+            "1. Open a [b]private / incognito[/b] window and log into YouTube.\n"
+            "2. In a new tab on youtube.com, export with\n"
+            "   [b]Get cookies.txt LOCALLY[/b].\n"
+            "3. [b]Close the private window[/b] right after exporting.\n"
+            f"4. Replace [#ff6b6b]{_escape(str(path))}[/]\n"
+            "5. Press [b]r[/b] to refresh.[/]\n\n"
+            "[#6f6f78]The incognito-then-close step matters: cookies from a\n"
+            "browser you keep using are often rotated and invalidated.[/]"
+        )
 
     def _show_signin_help(self) -> None:
         path = account.cookies_path()

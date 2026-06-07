@@ -103,8 +103,14 @@ The Library tabs need a valid YouTube cookies file.
   ```
 
   Put your exported `cookies.txt` there (or set `BOXTUBE_COOKIES`), then press `r`.
-- **Was working, now errors** — cookies expire. Re-export `cookies.txt` from your
-  browser and overwrite the file. See the [accounts guide](accounts.md).
+- **Empty feeds / "playlist does not exist" while signed in** — your cookies
+  aren't authenticating (expired, rotated, or an incomplete export missing the
+  first-party login cookies). Re-export using a **private/incognito window that
+  you close right after exporting** — see the [accounts guide](accounts.md). This
+  is the single most common cause; BoxTube shows the re-export steps in-app when
+  it detects it.
+- **Was working, now errors** — cookies expire. Re-export `cookies.txt` and
+  overwrite the file.
 - **A tab loads but is empty** — that list may genuinely be empty (e.g. no Watch
   Later items), or your account region/settings hide it. Try another tab to
   confirm sign-in works.

@@ -34,6 +34,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   argument; feed loaders share one internal yt-dlp runner.
 
 ### Fixed
+- Personalized feeds that fail because of expired/incomplete cookies now show a
+  clear in-app "Your sign-in isn't working" panel with re-export steps (private
+  window), instead of a vague "No results". Detected from empty feeds while
+  signed in and from auth-style yt-dlp errors (e.g. "playlist does not exist").
 - Playback no longer fails with "Requested format is not available" on videos
   where YouTube's `web` client returns a degraded format set without a JS
   runtime: BoxTube now forces the JS-free `android_vr`/`tv` clients and ends the

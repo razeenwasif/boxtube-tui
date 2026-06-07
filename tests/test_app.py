@@ -179,6 +179,52 @@ def test_play_without_mpv_notifies(sample_videos, monkeypatch):
     run(go())
 
 
+def test_cookie_trouble_renders():
+    async def go():
+        app = BoxTube()
+        async with app.run_test() as pilot:
+            app._show_cookie_trouble("WL: YouTube said: The playlist does not exist.")
+            await pilot.pause()
+            assert isinstance(app.query_one("#meta", Static), Static)
+
+    run(go())
+
+
+def test_empty_feed_signed_in_shows_cookie_trouble(monkeypatch):
+    monkeypatch.setattr(account_mod, "is_signed_in", lambda: True)
+    monkeypatch.setattr(account_mod, "cookies_arg", lambda: "/ck")
+
+    async def go():
+        app = BoxTube()
+        async with app.run_test() as pilot:
+            calls: list = []
+            monkeypatch.setattr(app, "_show_cookie_trouble", lambda detail="": calls.append(detail))
+            app._current_source = "home"
+            app._populate_videos([], "Home")
+            await pilot.pause()
+            assert calls, "expected cookie-trouble guidance for an empty feed while signed in"
+
+    run(go())
+
+
+def test_auth_error_shows_cookie_trouble(monkeypatch):
+    monkeypatch.setattr(account_mod, "is_signed_in", lambda: True)
+    monkeypatch.setattr(account_mod, "cookies_arg", lambda: "/ck")
+
+    async def go():
+        app = BoxTube()
+        async with app.run_test() as pilot:
+            calls: list = []
+            monkeypatch.setattr(app, "_show_cookie_trouble", lambda detail="": calls.append(detail))
+            monkeypatch.setattr(app, "notify", lambda *a, **k: None)
+            app._on_load_error("LL: YouTube said: The playlist does not exist.")
+            await pilot.pause()
+            assert calls
+            assert app.query_one("#results", ListView).border_title == "Sign-in problem"
+
+    run(go())
+
+
 def test_signed_in_opens_home_on_mount(monkeypatch, sample_videos):
     monkeypatch.setattr(account_mod, "is_signed_in", lambda: True)
     monkeypatch.setattr(account_mod, "cookies_arg", lambda: "/tmp/ck.txt")
