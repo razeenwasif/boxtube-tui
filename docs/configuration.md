@@ -10,6 +10,7 @@ knobs that exist are documented here.
 | `BOXTUBE_VO` | `kitty`, `sixel`, `tct`, or any valid mpv `--vo` | auto-detected | Forces the mpv video output used for playback |
 | `BOXTUBE_COOKIES` | Path to a cookies.txt | `~/.config/boxtube/cookies.txt` | Where BoxTube reads your YouTube cookies for personalized feeds |
 | `BOXTUBE_JS_RUNTIME` | Runtime spec, e.g. `deno`, `node:/opt/node/bin`, or empty | auto-detected | JS runtime passed to yt-dlp; empty disables auto-detection |
+| `BOXTUBE_PLAYBACK_COOKIES` | any non-empty value | unset (off) | Send your cookies to mpv during playback (needed for private/members-only videos; breaks normal playback unless a full JS solver is set up) |
 | `XDG_CONFIG_HOME` | Path | `~/.config` | Base dir for the default cookies path |
 
 ### Sign-in / cookies (`BOXTUBE_COOKIES`)
@@ -46,6 +47,18 @@ BOXTUBE_JS_RUNTIME= boxtube              # disable (empty value)
 > To let the runtime fully solve challenges, yt-dlp may also need its EJS solver
 > script. That involves a remote download and is left opt-in — see
 > [troubleshooting](troubleshooting.md#playback-fails-requested-format-is-not-available).
+
+### Playback cookies (`BOXTUBE_PLAYBACK_COOKIES`)
+
+By default BoxTube does **not** send your cookies to mpv during playback, even
+when signed in. The JS-free `android_vr`/`tv` clients used for reliable playback
+don't support authenticated requests, so passing cookies forces the JS-dependent
+`web` client and breaks extraction ("Requested format is not available").
+Age-restricted videos already play **without** cookies via those clients.
+
+Set `BOXTUBE_PLAYBACK_COOKIES=1` only if you need to play **private** or
+**members-only** videos *and* have a working JS solver configured — otherwise it
+will break normal playback.
 
 ### Video output (`BOXTUBE_VO`)
 

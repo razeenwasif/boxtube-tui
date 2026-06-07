@@ -8,6 +8,8 @@ sign-in (see :mod:`boxtube.account`); search works signed out.
 
 from __future__ import annotations
 
+import os
+
 from textual import work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
@@ -408,7 +410,11 @@ class BoxTube(App[None]):
             )
             return
         vo = player.detect_vo()
-        cookies = account.cookies_arg()
+        # Cookies break playback (they disable the JS-free clients), so don't
+        # send them by default. Age-restricted videos already play cookie-free.
+        # Power users who need private/members-only playback (and have a JS
+        # solver) can opt in with BOXTUBE_PLAYBACK_COOKIES=1.
+        cookies = account.cookies_arg() if os.environ.get("BOXTUBE_PLAYBACK_COOKIES") else None
         self.notify(f"Loading “{video.title}” (vo={vo})…  press q in mpv to return.")
         with self.suspend():
             print(f"\n▶  BoxTube — playing: {video.title}")

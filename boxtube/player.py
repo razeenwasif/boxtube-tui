@@ -52,7 +52,9 @@ def build_command(url: str, vo: str | None = None, cookies: str | None = None) -
     cmd = [
         mpv,
         f"--vo={vo}",
-        "--really-quiet",
+        # Quiet, but NOT --really-quiet: the latter suppresses errors too, which
+        # hides playback failures. error level keeps the screen clean on success
+        # while still surfacing real problems.
         "--msg-level=all=error",
         # Cap resolution: terminal cells are coarse, lower res streams start
         # faster and decode lighter while looking identical once rendered. The
@@ -75,7 +77,11 @@ def build_command(url: str, vo: str | None = None, cookies: str | None = None) -
     if js:
         cmd.append(f"--ytdl-raw-options-append=js-runtimes={js}")
 
-    # Pass cookies to yt-dlp's hook so private / age-restricted videos play.
+    # Cookies are opt-in for playback: the JS-free android_vr/tv clients above
+    # don't support authenticated requests, so cookies force the JS-dependent web
+    # client and break extraction. Only pass them when explicitly enabled (and a
+    # full JS solver is available). Age-restricted videos already work cookie-free
+    # via the android_vr/tv clients. The caller decides whether to pass cookies.
     if cookies:
         cmd.append(f"--ytdl-raw-options-append=cookies={cookies}")
 

@@ -33,6 +33,17 @@ Confirm BoxTube is using the fresh copy (it prefers the venv one):
 
 See [configuration → yt-dlp resolution](configuration.md#yt-dlp-resolution).
 
+## Videos won't play and there's no error message
+
+Older builds ran mpv with `--really-quiet`, which suppressed *errors too* — so a
+failed playback looked like nothing happening. BoxTube now runs mpv at
+error-level verbosity, so real failures print. If a video still won't play, you
+should now see the reason (most often the "format not available" issue below).
+
+A common trigger was sending cookies to playback while signed in. BoxTube no
+longer does that by default (see
+[playback cookies](configuration.md#playback-cookies-boxtube_playback_cookies)).
+
 ## Playback fails: "Requested format is not available"
 
 **Cause** — recent yt-dlp needs a JavaScript runtime for YouTube's default `web`

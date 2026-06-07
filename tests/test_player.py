@@ -71,6 +71,15 @@ def test_build_command_core(monkeypatch):
     assert "--profile=sw-fast" not in cmd
 
 
+def test_build_command_keeps_errors_visible(monkeypatch):
+    monkeypatch.setattr(player, "find_ytdlp", lambda: "/opt/yt-dlp")
+    monkeypatch.setattr(player, "mpv_path", lambda: "/usr/bin/mpv")
+    cmd = player.build_command("url", vo="kitty")
+    # --really-quiet would suppress playback errors too; must not be present.
+    assert "--really-quiet" not in cmd
+    assert "--msg-level=all=error" in cmd
+
+
 def test_build_command_includes_js_runtime(monkeypatch):
     monkeypatch.setattr(player, "find_ytdlp", lambda: "/opt/yt-dlp")
     monkeypatch.setattr(player, "find_js_runtime", lambda: "deno")

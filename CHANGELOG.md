@@ -34,6 +34,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   argument; feed loaders share one internal yt-dlp runner.
 
 ### Fixed
+- Playback no longer silently fails when signed in. Sending cookies to mpv broke
+  extraction (the JS-free `android_vr`/`tv` clients don't support authenticated
+  requests, forcing the JS-dependent `web` client). Cookies are no longer sent to
+  playback by default; opt in with `BOXTUBE_PLAYBACK_COOKIES` for private/
+  members-only videos. Age-restricted videos still play cookie-free.
+- mpv no longer runs with `--really-quiet`, which had suppressed error messages —
+  playback failures are now visible.
 - Personalized feeds that fail because of expired/incomplete cookies now show a
   clear in-app "Your sign-in isn't working" panel with re-export steps (private
   window), instead of a vague "No results". Detected from empty feeds while
