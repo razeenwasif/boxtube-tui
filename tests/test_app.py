@@ -155,6 +155,9 @@ def test_grid_lazy_loads_only_visible_cards():
             app._populate_videos(vids, "Home")
             await pilot.pause()
             await pilot.pause()
+            # Reset the loaded set so this measures pure region visibility (the
+            # worker may already have loaded the on-screen cards by now).
+            app._thumbs_loaded = set()
             visible = app._visible_unloaded_cards()
             # Only on-screen cards (+ a small buffer) — not all 40.
             assert 0 < len(visible) < len(vids)
