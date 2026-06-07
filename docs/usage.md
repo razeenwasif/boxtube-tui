@@ -17,13 +17,13 @@ the [accounts guide](accounts.md) to enable personalized tabs.
 ```
 ▶ BoxTube            ╭──────── Search ────────╮              ◉ You        ← header
  [All] Music Gaming News Live Podcasts Learning Sports …                  ← filter chips
-╭ You ───────╮╭─ Home — Subscriptions (40) ─╮╭─ Preview ──────────────╮
-│ 🏠 Home    ││▌Highlighted video title     ││      [ thumbnail ]     │
-│ 🕘 History ││ Channel   12:34   1.2M      ││                        │
-│ 🎵 Playlists│ Next video title            ││ Highlighted title      │
-│ ⏰ Later   ││ Channel   3:21    44K       ││ Channel  …             │
-│ 👍 Liked   ││ …                           ││ Length   …             │
-│ Subscriptions                             ││ Views    …             │
+╭ You ───────╮╭ Home — Subscriptions (40) ──╮╭─ Preview ──────────────╮
+│ 🏠 Home    ││ ▓▓▓▓▓   ▓▓▓▓▓   ▓▓▓▓▓        ││     [ thumbnail ]      │
+│ 🕘 History ││ Title…  Title…  Title…       ││                        │
+│ 🎵 Playlists│ Chan…   Chan…   Chan…        ││ Highlighted title      │
+│ ⏰ Later   ││ ▓▓▓▓▓   ▓▓▓▓▓   ▓▓▓▓▓        ││ Channel                │
+│ 👍 Liked   ││ Title…  Title…  Title…       ││ 1.2M views · 12:34     │
+│ Subscriptions                             ││ link · description     │
 │ ◍ Lofi Girl││                             ││                        │
 ╰────────────╯╰─────────────────────────────╯╰────────────────────────╯
  / Search   Enter Play   o Open   r Refresh   ? Sign in        ^q Quit     ← footer
@@ -34,9 +34,11 @@ the [accounts guide](accounts.md) to enable personalized tabs.
 - **Filter chips** — click a category pill to search it; **All** returns to Home.
 - **Sidebar** — a **You** group (Home, History, Playlists, Watch Later, Liked) and
   a **Subscriptions** group listing your subscribed channels.
-- **Results** — videos (or playlists) for the current tab/selection. The
-  highlighted row has a light-red accent bar.
-- **Preview** — the highlighted video's thumbnail, metadata, and description.
+- **Grid** — a responsive grid of video cards (thumbnail + title + channel · views
+  · duration). The highlighted card has a red border. Move with the **arrow
+  keys**; press **Enter** to play (or double-click a card).
+- **Preview** — the highlighted video's larger thumbnail, title, channel,
+  views/length, link, and description.
 - **Footer** — context keybindings.
 
 ## Keybindings
@@ -44,8 +46,8 @@ the [accounts guide](accounts.md) to enable personalized tabs.
 | Key | Action |
 |-----|--------|
 | `/` or `Esc` | Focus the search box |
-| `Enter` | Run search (in box) / play video / open playlist (in results) |
-| `↑` / `↓` | Move through the current list |
+| `Enter` | Run search (in box) / play the highlighted video / open a playlist |
+| `↑` `↓` `←` `→` | Move through the video grid |
 | `1`–`5` | Jump to a Library tab (Home, History, Liked, Watch Later, Playlists) |
 | `p` | Play the highlighted video |
 | `o` | Open the highlighted video in your web browser |

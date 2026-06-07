@@ -2,8 +2,9 @@
 
 A YouTube-styled layout: a header with a centered search bar, a row of filter
 chips, a left sidebar (Home / History / Playlists / Watch Later / Liked, plus your
-subscribed channels), a results list, and a preview pane. Personalized feeds use a
-cookies file for sign-in (see :mod:`boxtube.account`); search works signed out.
+subscribed channels), a **thumbnail grid** of videos, and a preview pane with the
+highlighted video's details. Personalized feeds use a cookies file for sign-in
+(see :mod:`boxtube.account`); search works signed out.
 """
 
 from __future__ import annotations
@@ -13,7 +14,7 @@ import os
 from textual import work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.containers import Horizontal, HorizontalScroll, VerticalScroll
+from textual.containers import Grid, Horizontal, HorizontalScroll, Vertical, VerticalScroll
 from textual.message import Message
 from textual.widgets import Footer, Input, Label, ListItem, ListView, Static
 from textual_image.widget import Image
@@ -49,21 +50,80 @@ FEED_KEYS = {"home", "history", "liked", "watch_later", "playlists"}
 _AUTH_HINTS = ("does not exist", "sign in", "log in", "login", "private", "cookie",
                "members-only", "unavailable", "not available on this app")
 
+# Grid sizing: target card width (cols) used to compute the column count.
+CARD_WIDTH = 24
+GRID_GUTTER = 2
 
-class Chip(Static):
-    """A clickable filter pill in the chips row."""
 
-    class Selected(Message):
-        def __init__(self, label: str) -> None:
-            super().__init__()
-            self.label = label
+class CardSelected(Message):
+    """Posted when a grid card gains focus (→ update the preview)."""
 
-    def __init__(self, label: str) -> None:
-        super().__init__(label, classes="chip")
-        self.label = label
+    def __init__(self, card: "Card") -> None:
+        super().__init__()
+        self.card = card
 
-    def on_click(self) -> None:
-        self.post_message(self.Selected(self.label))
+
+class CardActivated(Message):
+    """Posted when a grid card is double-clicked (→ play / open)."""
+
+    def __init__(self, card: "Card") -> None:
+        super().__init__()
+        self.card = card
+
+
+class Card(Vertical):
+    """A focusable grid cell. Subclasses hold a Video or Playlist as ``item``."""
+
+    can_focus = True
+
+    def __init__(self, item) -> None:
+        super().__init__(classes="card")
+        self.item = item
+
+    def on_focus(self) -> None:
+        self.add_class("-sel")
+        self.post_message(CardSelected(self))
+
+    def on_blur(self) -> None:
+        self.remove_class("-sel")
+
+    def on_click(self, event) -> None:
+        if getattr(event, "chain", 1) >= 2:  # double-click activates
+            self.post_message(CardActivated(self))
+
+
+class VideoCard(Card):
+    """A video tile: thumbnail + title + channel/meta."""
+
+    def __init__(self, video: Video) -> None:
+        super().__init__(video)
+        self.video = video
+
+    def compose(self) -> ComposeResult:
+        v = self.video
+        yield Image(thumbnails.placeholder(), classes="card-thumb")
+        yield Label(v.title, classes="card-title")
+        yield Label(
+            f"{v.channel} · {v.views_str} views · {v.duration_str}",
+            classes="card-meta",
+        )
+
+    def set_thumb(self, image) -> None:
+        self.query_one(".card-thumb", Image).image = image
+
+
+class PlaylistCard(Card):
+    """A playlist tile (drill-down)."""
+
+    def __init__(self, playlist: Playlist) -> None:
+        super().__init__(playlist)
+        self.playlist = playlist
+
+    def compose(self) -> ComposeResult:
+        p = self.playlist
+        yield Static("🎵", classes="card-thumb card-thumb-icon")
+        yield Label(p.title, classes="card-title")
+        yield Label(p.count_str, classes="card-meta")
 
 
 class NavItem(ListItem):
@@ -90,34 +150,20 @@ class ChannelItem(ListItem):
         yield Label(f"[#ff6b6b]◍[/]  {_escape(self.channel.name)}", markup=True, classes="channel")
 
 
-class VideoItem(ListItem):
-    """A video row in the results list."""
+class Chip(Static):
+    """A clickable filter pill in the chips row."""
 
-    def __init__(self, video: Video) -> None:
-        super().__init__()
-        self.video = video
+    class Selected(Message):
+        def __init__(self, label: str) -> None:
+            super().__init__()
+            self.label = label
 
-    def compose(self) -> ComposeResult:
-        v = self.video
-        yield Label(v.title, classes="title")
-        yield Label(
-            f"[b]{v.channel}[/b]   {v.duration_str}   {v.views_str} views",
-            classes="meta",
-            markup=True,
-        )
+    def __init__(self, label: str) -> None:
+        super().__init__(label, classes="chip")
+        self.label = label
 
-
-class PlaylistItem(ListItem):
-    """A playlist row in the results list (drill-down)."""
-
-    def __init__(self, playlist: Playlist) -> None:
-        super().__init__()
-        self.playlist = playlist
-
-    def compose(self) -> ComposeResult:
-        p = self.playlist
-        yield Label(f"🎵  {p.title}", classes="title")
-        yield Label(p.count_str, classes="meta")
+    def on_click(self) -> None:
+        self.post_message(self.Selected(self.label))
 
 
 class BoxTube(App[None]):
@@ -136,6 +182,10 @@ class BoxTube(App[None]):
         Binding("question_mark", "help", "Sign in", show=True),
         Binding("backspace", "back", "Back", show=False),
         Binding("escape", "focus_search", "Search", show=False),
+        Binding("up", "grid_move('up')", "", show=False),
+        Binding("down", "grid_move('down')", "", show=False),
+        Binding("left", "grid_move('left')", "", show=False),
+        Binding("right", "grid_move('right')", "", show=False),
         Binding("1", "select_nav(0)", "", show=False),
         Binding("2", "select_nav(1)", "", show=False),
         Binding("3", "select_nav(2)", "", show=False),
@@ -150,6 +200,9 @@ class BoxTube(App[None]):
         self._drill_playlist: Playlist | None = None
         self._drill_channel: Channel | None = None
         self._last_query: str | None = None
+        self._cards: list[Card] = []
+        self._cols: int = 1
+        self._focused_item = None
 
     # ----- layout --------------------------------------------------------
 
@@ -170,7 +223,8 @@ class BoxTube(App[None]):
                         yield NavItem(key, icon, label)
                 yield Static("Subscriptions", classes="nav-section")
                 yield ListView(id="subs")
-            yield ListView(id="results")
+            with VerticalScroll(id="grid"):
+                yield Grid(id="grid-inner")
             with VerticalScroll(id="detail-pane"):
                 yield Image(thumbnails.placeholder(), id="thumb")
                 yield Static("", id="meta", markup=True)
@@ -178,7 +232,7 @@ class BoxTube(App[None]):
         yield Footer()
 
     def on_mount(self) -> None:
-        self.query_one("#results", ListView).border_title = "Home"
+        self.query_one("#grid").border_title = "Home"
         self.query_one("#detail-pane").border_title = "Preview"
         self._update_auth()
         self.query_one("#nav", ListView).index = 0
@@ -198,6 +252,13 @@ class BoxTube(App[None]):
             auth.update("[#6ee7a0]◉[/] [#e8e8ea]You[/]")
         else:
             auth.update("[#8a8a94]○ Sign in[/] [#ff6b6b](?)[/]")
+
+    def on_resize(self, event) -> None:
+        if self._cards:
+            cols = self._compute_cols()
+            if cols != self._cols:
+                self._cols = cols
+                self.query_one("#grid-inner", Grid).styles.grid_size_columns = cols
 
     # ----- chips ---------------------------------------------------------
 
@@ -250,6 +311,28 @@ class BoxTube(App[None]):
             self._open_source("playlists")
         elif self._drill_channel is not None:
             self._open_source(self._current_source or "home")
+
+    # ----- grid navigation ----------------------------------------------
+
+    def action_grid_move(self, direction: str) -> None:
+        cards = self._cards
+        if not cards:
+            return
+        current = self.focused
+        if current not in cards:
+            cards[0].focus()
+            return
+        idx = cards.index(current)
+        cols = max(1, self._cols)
+        target = {
+            "left": idx - 1,
+            "right": idx + 1,
+            "up": idx - cols,
+            "down": idx + cols,
+        }[direction]
+        if 0 <= target < len(cards):
+            cards[target].focus()
+            cards[target].scroll_visible()
 
     # ----- loading (workers) ---------------------------------------------
 
@@ -327,6 +410,22 @@ class BoxTube(App[None]):
             return
         self.call_from_thread(self._populate_videos, videos, f"Search: {query}")
 
+    @work(thread=True, exclusive=True, group="grid-thumbs")
+    def _load_grid_thumbnails(self, cards: list[VideoCard]) -> None:
+        for card in cards:
+            video = card.item
+            try:
+                image = thumbnails.fetch(video.id, video.thumbnail_url)
+            except Exception:
+                continue
+            self.call_from_thread(self._apply_card_thumb, card, image)
+
+    def _apply_card_thumb(self, card: VideoCard, image) -> None:
+        try:
+            card.set_thumb(image)
+        except Exception:
+            pass  # card may have been replaced by a newer load
+
     # ----- search --------------------------------------------------------
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
@@ -342,37 +441,15 @@ class BoxTube(App[None]):
 
     # ----- populate ------------------------------------------------------
 
+    def _compute_cols(self) -> int:
+        width = self.query_one("#grid").content_size.width or 70
+        return max(1, (width + GRID_GUTTER) // (CARD_WIDTH + GRID_GUTTER))
+
     def _populate_videos(self, videos: list[Video], title: str) -> None:
-        results = self.query_one("#results", ListView)
-        results.clear()
-        for video in videos:
-            results.append(VideoItem(video))
-        if videos:
-            self._set_results_title(f"{title} ({len(videos)})")
-            results.index = 0
-            results.focus()
-            self._show_details(videos[0])
-        else:
-            self._set_results_title(title)
-            if account.is_signed_in() and self._current_source in FEED_KEYS:
-                # Signed in but a feed came back empty — almost always bad cookies.
-                self._show_cookie_trouble("This feed came back empty.")
-            else:
-                self._show_message("Nothing to show", "This list is empty.")
+        self._show_grid([VideoCard(v) for v in videos], title, video_feed=True)
 
     def _populate_playlists(self, playlists: list[Playlist], title: str) -> None:
-        results = self.query_one("#results", ListView)
-        results.clear()
-        for playlist in playlists:
-            results.append(PlaylistItem(playlist))
-        if playlists:
-            self._set_results_title(f"{title} ({len(playlists)})")
-            results.index = 0
-            results.focus()
-            self._show_playlist_detail(playlists[0])
-        else:
-            self._set_results_title(title)
-            self._show_message("No playlists", "You don't have any playlists yet.")
+        self._show_grid([PlaylistCard(p) for p in playlists], title, video_feed=False)
 
     def _populate_channels(self, channels: list[Channel]) -> None:
         subs = self.query_one("#subs", ListView)
@@ -380,11 +457,38 @@ class BoxTube(App[None]):
         for channel in channels:
             subs.append(ChannelItem(channel))
 
+    def _show_grid(self, cards: list[Card], title: str, video_feed: bool) -> None:
+        grid = self.query_one("#grid-inner", Grid)
+        grid.remove_children()
+        self._cards = cards
+        self._focused_item = None
+        if cards:
+            grid.mount(*cards)
+            self._set_results_title(f"{title} ({len(cards)})")
+            self.call_after_refresh(self._finalize_grid)
+        else:
+            self._set_results_title(title)
+            if account.is_signed_in() and video_feed and self._current_source in FEED_KEYS:
+                self._show_cookie_trouble("This feed came back empty.")
+            else:
+                self._show_message("Nothing to show", "This list is empty.")
+
+    def _finalize_grid(self) -> None:
+        if not self._cards:
+            return
+        self._cols = self._compute_cols()
+        self.query_one("#grid-inner", Grid).styles.grid_size_columns = self._cols
+        self._cards[0].focus()
+        video_cards = [c for c in self._cards if isinstance(c, VideoCard)]
+        if video_cards:
+            self._load_grid_thumbnails(video_cards)
+
     def _set_results_title(self, title: str) -> None:
-        self.query_one("#results", ListView).border_title = title
+        self.query_one("#grid").border_title = title
 
     def _on_load_error(self, message: str) -> None:
-        self.query_one("#results", ListView).clear()
+        self.query_one("#grid-inner", Grid).remove_children()
+        self._cards = []
         self._update_auth()
         if not account.is_signed_in():
             self._set_results_title("Sign in required")
@@ -398,7 +502,7 @@ class BoxTube(App[None]):
             self._show_message("Couldn't load", message)
         self.notify(message, severity="error", timeout=8)
 
-    # ----- selection / details ------------------------------------------
+    # ----- card selection / details -------------------------------------
 
     def on_list_view_selected(self, event: ListView.Selected) -> None:
         lv = event.list_view.id
@@ -406,31 +510,31 @@ class BoxTube(App[None]):
             self.action_select_nav(event.list_view.index or 0)
         elif lv == "subs" and isinstance(event.item, ChannelItem):
             self._open_channel(event.item.channel)
-        elif isinstance(event.item, VideoItem):
-            self._watch(event.item.video)
-        elif isinstance(event.item, PlaylistItem):
-            self._open_playlist(event.item.playlist)
 
-    def on_list_view_highlighted(self, event: ListView.Highlighted) -> None:
-        if event.list_view.id != "results":
-            return
-        if isinstance(event.item, VideoItem):
-            self._show_details(event.item.video)
-        elif isinstance(event.item, PlaylistItem):
-            self._show_playlist_detail(event.item.playlist)
+    def on_card_selected(self, event: CardSelected) -> None:
+        self._focused_item = event.card.item
+        if isinstance(event.card, VideoCard):
+            self._show_details(event.card.item)
+        elif isinstance(event.card, PlaylistCard):
+            self._show_playlist_detail(event.card.item)
 
-    def _current_item(self) -> VideoItem | None:
-        item = self.query_one("#results", ListView).highlighted_child
-        return item if isinstance(item, VideoItem) else None
+    def on_card_activated(self, event: CardActivated) -> None:
+        self._activate(event.card.item)
+
+    def _activate(self, item) -> None:
+        if isinstance(item, Video):
+            self._watch(item)
+        elif isinstance(item, Playlist):
+            self._open_playlist(item)
 
     def _show_details(self, video: Video) -> None:
         self._current_video_id = video.id
         meta = (
-            f"[b #ff8a8a]{_escape(video.title)}[/]\n\n"
-            f"[#8a8a94]Channel[/]   {_escape(video.channel)}\n"
-            f"[#8a8a94]Length[/]    {video.duration_str}\n"
-            f"[#8a8a94]Views[/]     {video.views_str} views\n"
-            f"[#8a8a94]Link[/]      [link='{video.watch_url}']{_escape(video.id)}[/link]"
+            f"[b #f1f1f1]{_escape(video.title)}[/]\n\n"
+            f"[#aaaaaa]{_escape(video.channel)}[/]\n"
+            f"[#aaaaaa]{video.views_str} views · {video.duration_str}[/]\n\n"
+            f"[link='{video.watch_url}'][#3ea6ff]{_escape(video.watch_url)}[/][/]\n"
+            f"[#6f6f78]Enter to play · o to open in browser[/]"
         )
         self.query_one("#meta", Static).update(meta)
 
@@ -438,7 +542,7 @@ class BoxTube(App[None]):
         if len(desc) > 1500:
             desc = desc[:1500].rstrip() + "…"
         desc_markup = _escape(desc) if desc else "No description available."
-        self.query_one("#desc", Static).update(f"[#6f6f78]{desc_markup}[/]")
+        self.query_one("#desc", Static).update(f"[#cccccc]{desc_markup}[/]")
 
         self.query_one("#thumb", Image).image = thumbnails.placeholder()
         self.load_thumbnail(video)
@@ -447,11 +551,11 @@ class BoxTube(App[None]):
         self._current_video_id = None
         self.query_one("#thumb", Image).image = thumbnails.placeholder()
         self.query_one("#meta", Static).update(
-            f"[b #ff8a8a]{_escape(playlist.title)}[/]\n\n"
-            f"[#8a8a94]Playlist[/]   {playlist.count_str}"
+            f"[b #f1f1f1]{_escape(playlist.title)}[/]\n\n"
+            f"[#aaaaaa]Playlist · {playlist.count_str}[/]"
         )
         self.query_one("#desc", Static).update(
-            "[#a8a8b2]Press [b]Enter[/b] to open · [b]Backspace[/b] to go back[/]"
+            "[#cccccc]Press [b]Enter[/b] to open · [b]Backspace[/b] to go back[/]"
         )
 
     @work(thread=True, exclusive=True, group="thumb")
@@ -473,19 +577,18 @@ class BoxTube(App[None]):
         self.query_one("#search", Input).focus()
 
     def action_play(self) -> None:
-        item = self._current_item()
-        if item is None:
+        if self._focused_item is None:
             self.notify("Highlight a video first.", severity="warning")
             return
-        self._watch(item.video)
+        self._activate(self._focused_item)
 
     def action_open_browser(self) -> None:
-        item = self._current_item()
-        if item is None:
+        item = self._focused_item
+        if not isinstance(item, Video):
             self.notify("Highlight a video first.", severity="warning")
             return
-        if opener.open_url(item.video.watch_url):
-            self.notify(f"Opened {item.video.watch_url}")
+        if opener.open_url(item.watch_url):
+            self.notify(f"Opened {item.watch_url}")
         else:
             self.notify("Couldn't find a browser to open the link.", severity="error")
 
@@ -526,7 +629,8 @@ class BoxTube(App[None]):
     # ----- messages / help ----------------------------------------------
 
     def _require_sign_in(self) -> None:
-        self.query_one("#results", ListView).clear()
+        self.query_one("#grid-inner", Grid).remove_children()
+        self._cards = []
         self._set_results_title("Sign in required")
         self._show_signin_help()
         self.notify("Sign in to view this. Press ? for steps.", severity="warning")
@@ -534,8 +638,8 @@ class BoxTube(App[None]):
     def _show_message(self, title: str, body: str) -> None:
         self._current_video_id = None
         self.query_one("#thumb", Image).image = thumbnails.placeholder()
-        self.query_one("#meta", Static).update(f"[b #ff8a8a]{_escape(title)}[/]")
-        self.query_one("#desc", Static).update(f"[#a8a8b2]{_escape(body)}[/]")
+        self.query_one("#meta", Static).update(f"[b #f1f1f1]{_escape(title)}[/]")
+        self.query_one("#desc", Static).update(f"[#aaaaaa]{_escape(body)}[/]")
 
     def _show_cookie_trouble(self, detail: str = "") -> None:
         path = account.cookies_path()

@@ -32,7 +32,7 @@ persistent state beyond an in-memory thumbnail cache for the session.
 
 | Module | Responsibility | Key surface |
 |--------|----------------|-------------|
-| `boxtube/app.py` | Textual UI, layout, nav, events, orchestration | `BoxTube(App)`, `NavItem`/`VideoItem`/`PlaylistItem`, `main()` |
+| `boxtube/app.py` | Textual UI, layout, nav, events, orchestration | `BoxTube(App)`, `VideoCard`/`PlaylistCard`/`NavItem`/`ChannelItem`/`Chip`, `main()` |
 | `boxtube/youtube.py` | Search & personalized feeds via `yt-dlp`; binary discovery; models & formatting | `search()`, `videos_for_feed()`, `user_playlists()`, `Video`, `Playlist`, `find_ytdlp()` |
 | `boxtube/account.py` | Sign-in state from a cookies file | `is_signed_in()`, `cookies_arg()`, `cookies_path()` |
 | `boxtube/thumbnails.py` | Download + cache thumbnails as PIL images | `fetch()`, `placeholder()` |
@@ -69,8 +69,16 @@ split the results into `Video`s and `Playlist`s (`_is_video_entry` /
 
 **Sign-in** is just the presence of a non-empty cookies file (`account`). Opening
 an auth tab while signed out renders in-app sign-in steps instead of calling
-yt-dlp. **Playlists** is a two-level view: the list of playlists, then a selected
-playlist's videos (`Backspace` returns), tracked by `self._drill_playlist`.
+yt-dlp. **Playlists** and **channels** are two-level views: the list, then a
+selected item's videos (`Backspace` returns), tracked by `self._drill_playlist` /
+`self._drill_channel`.
+
+Videos render in a **responsive thumbnail grid** of focusable `VideoCard`s (a
+Textual `Grid` whose column count is computed from the pane width and reset on
+resize). Each card posts `CardSelected` on focus (→ update the preview) and
+`CardActivated` on double-click (→ play); arrow keys move focus through the grid.
+A single background worker fills card thumbnails sequentially (cached), so a
+populate doesn't spawn dozens of threads.
 
 ## UI composition
 
@@ -78,13 +86,14 @@ playlist's videos (`Backspace` returns), tracked by `self._drill_playlist`.
 
 ```
 Screen
-├── #appbar (Horizontal)        app bar: brand + hint
-├── #search (Input)             query box
+├── #appbar (Horizontal)        brand + centered #search (Input) + auth
+├── #chips (HorizontalScroll)   filter Chips
 ├── #body (Horizontal)
-│   ├── #results (ListView)     VideoItem rows (title + meta)
+│   ├── #sidebar (VerticalScroll)   "You" #nav + "Subscriptions" #subs (ListViews)
+│   ├── #grid (VerticalScroll)      #grid-inner (Grid) of VideoCard / PlaylistCard
 │   └── #detail-pane (VerticalScroll)
 │       ├── #thumb (Image)      textual-image widget
-│       ├── #meta (Static)      title / channel / length / views / link
+│       ├── #meta (Static)      title / channel / views·length / link
 │       └── #desc (Static)      description
 └── Footer                      keybindings
 ```
@@ -107,8 +116,8 @@ youtube.search(query, 25)      subprocess: yt-dlp "ytsearch25:query"
         │                                  --flat-playlist --dump-json
         │  list[Video]
         ▼
-call_from_thread(_populate)    (UI thread) clear + append VideoItem rows,
-                                            highlight first, show details
+call_from_thread(_populate_videos)   (UI thread) build VideoCards in the grid,
+                                     focus the first, show its details
 ```
 
 `youtube.search()` runs `yt-dlp` with `--flat-playlist --dump-json`, which emits

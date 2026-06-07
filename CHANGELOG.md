@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Thumbnail grid**: videos now render in a responsive grid of focusable cards
+  (thumbnail + title + channel · views · duration) instead of a list. Arrow keys
+  move through the grid, Enter/double-click plays, and the column count adapts to
+  the window width. The preview pane shows a richer view of the highlighted video
+  (larger thumbnail, channel, views/length, link, description).
 - **YouTube-styled UI**: a header with the ▶ logo, a centered search bar, and a
   sign-in indicator; a row of clickable **filter chips** (All / Music / Gaming /
   …) that run searches; and a sidebar reorganized into a **You** group and a

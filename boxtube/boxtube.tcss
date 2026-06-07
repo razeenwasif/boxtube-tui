@@ -128,19 +128,27 @@ ListView#subs:focus > ChannelItem.-highlight {
     color: #ffffff;
 }
 
-/* middle results */
-#results {
-    width: 2fr;
+/* middle: video grid */
+#grid {
+    width: 3fr;
     height: 1fr;
     background: #181818;
     border: round #303030;
     border-title-color: #f1f1f1;
     border-title-style: bold;
     margin: 0 1;
-    padding: 0;
+    padding: 1;
     scrollbar-color: #303030;
     scrollbar-color-hover: #ff6b6b;
     scrollbar-size-vertical: 1;
+}
+
+#grid-inner {
+    grid-size-columns: 2;
+    grid-rows: auto;
+    grid-gutter: 1 2;
+    height: auto;
+    width: 1fr;
 }
 
 /* right preview */
@@ -156,38 +164,47 @@ ListView#subs:focus > ChannelItem.-highlight {
     scrollbar-color: #303030;
 }
 
-/* ----- result rows ------------------------------------------------- */
+/* ----- grid cards -------------------------------------------------- */
 
-VideoItem, PlaylistItem {
+.card {
     height: auto;
-    padding: 1 1 1 1;
+    padding: 0 0 1 0;
     background: transparent;
-    border-left: thick #181818;
+    border: round #181818;
 }
 
-VideoItem .title, PlaylistItem .title {
-    text-style: bold;
+.card:focus, .card.-sel {
+    border: round #ff6b6b;
+    background: #202020;
+}
+
+/* Fill the card width; height is derived to keep the 16:9 ratio (no stretch). */
+.card-thumb {
+    width: 1fr;
+    height: auto;
+}
+
+.card-thumb-icon {
+    width: 1fr;
+    height: 8;
+    content-align: center middle;
+    color: #ff6b6b;
+    background: #202020;
+}
+
+.card-title {
+    height: 2;
+    width: 1fr;
     color: #f1f1f1;
+    text-style: bold;
+    padding: 0 1;
 }
 
-VideoItem .meta, PlaylistItem .meta {
+.card-meta {
+    height: 1;
+    width: 1fr;
     color: #888888;
-}
-
-ListView#results > VideoItem.-highlight,
-ListView#results > PlaylistItem.-highlight {
-    background: #232323;
-    border-left: thick #ff6b6b;
-}
-
-ListView#results:focus > VideoItem.-highlight,
-ListView#results:focus > PlaylistItem.-highlight {
-    background: #2c2c2c;
-}
-
-ListView#results:focus > VideoItem.-highlight .title,
-ListView#results:focus > PlaylistItem.-highlight .title {
-    color: #ffffff;
+    padding: 0 1;
 }
 
 /* ----- detail pane contents --------------------------------------- */

@@ -15,17 +15,16 @@ using your terminal's native graphics protocol when available. No API key requir
 
 ```
 ▶ BoxTube            ╭──────── Search ────────╮                  ◉ You
-                     ╰────────────────────────╯
  [All] Music Gaming News Live Podcasts Learning Sports Comedy Mixes
-╭ You ───────╮╭─ Home — Subscriptions (3) ──╮╭─ Preview ────────────────╮
-│ 🏠 Home    ││▌Never Gonna Give You Up     ││      ░▒▓ thumbnail ▓▒░   │
-│ 🕘 History ││ Rick Astley   3:33  1.6B    ││                          │
-│ 🎵 Playlists│ lofi hip hop radio          ││ Never Gonna Give You Up  │
-│ ⏰ Later   ││ Lofi Girl   —  55.2M        ││ Channel  Rick Astley     │
-│ 👍 Liked   ││ …                           ││ Length   3:33            │
-│ Subscriptions                             ││ Views    1.6B            │
-│ ◍ Lofi Girl││                             ││                          │
-│ ◍ MKBHD    ││                             ││                          │
+╭ You ───────╮╭ Home — Subscriptions (24) ──╮╭─ Preview ────────────────╮
+│ 🏠 Home    ││ ▓▓▓▓▓▓   ▓▓▓▓▓▓   ▓▓▓▓▓▓     ││      ░▒▓ thumbnail ▓▒░   │
+│ 🕘 History ││ Title…   Title…   Title…     ││                          │
+│ 🎵 Playlists│ Chan·1M  Chan·44K Chan·8M    ││ Never Gonna Give You Up  │
+│ ⏰ Later   ││ ▓▓▓▓▓▓   ▓▓▓▓▓▓   ▓▓▓▓▓▓     ││ Rick Astley              │
+│ 👍 Liked   ││ Title…   Title…   Title…     ││ 1.6B views · 3:33        │
+│ Subscriptions                             ││ youtube.com/watch?v=…    │
+│ ◍ Lofi Girl││ …  a responsive thumbnail   ││                          │
+│ ◍ MKBHD    ││    grid of video cards …    ││ description…             │
 ╰────────────╯╰─────────────────────────────╯╰──────────────────────────╯
  / Search   Enter Play   o Open   r Refresh   ? Sign in          ^q Quit
 ```
@@ -47,7 +46,8 @@ using your terminal's native graphics protocol when available. No API key requir
 
 - **YouTube-styled layout** — a header with a centered search bar, a row of filter
   chips, a left sidebar (Home / History / Playlists / Watch Later / Liked plus your
-  **subscribed channels**), a results list, and a preview pane.
+  **subscribed channels**), a **responsive thumbnail grid** of videos, and a
+  preview pane with the highlighted video's details.
 - **Sign in for your feed** — browse your subscriptions feed, watch history, liked
   videos, watch later, playlists, and per-channel videos. Auth is via a
   browser-exported cookies file (no passwords). See the

@@ -44,7 +44,7 @@ def test_boot_has_all_widgets():
         async with app.run_test(size=(120, 34)):
             for sel in (
                 "#appbar", "#brand", "#search", "#auth", "#chips",
-                "#sidebar", "#nav", "#subs", "#results", "#detail-pane",
+                "#sidebar", "#nav", "#subs", "#grid", "#grid-inner", "#detail-pane",
                 "#thumb", "#meta", "#desc",
             ):
                 app.query_one(sel)  # raises if missing
@@ -112,7 +112,7 @@ def test_signed_out_prompts_sign_in():
     async def go():
         app = BoxTube()
         async with app.run_test():
-            assert app.query_one("#results", ListView).border_title == "Sign in required"
+            assert app.query_one("#grid").border_title == "Sign in required"
             assert app.query_one("#search", Input).has_focus
 
     run(go())
@@ -124,8 +124,10 @@ def test_populate_videos(sample_videos):
         async with app.run_test() as pilot:
             app._populate_videos(sample_videos, "Home")
             await pilot.pause()
+            await pilot.pause()  # call_after_refresh focuses the first card
+            assert len(app._cards) == 2
+            assert app.query_one("#grid").border_title == "Home (2)"
             assert app._current_video_id == sample_videos[0].id
-            assert app.query_one("#results", ListView).border_title == "Home (2)"
 
     run(go())
 
@@ -133,11 +135,13 @@ def test_populate_videos(sample_videos):
 def test_navigation_updates_current(sample_videos):
     async def go():
         app = BoxTube()
-        async with app.run_test() as pilot:
+        async with app.run_test(size=(120, 34)) as pilot:
             app._populate_videos(sample_videos, "Home")
             await pilot.pause()
-            await pilot.press("down")
             await pilot.pause()
+            app._cards[1].focus()  # focusing a card updates the preview selection
+            await pilot.pause()
+            assert app._focused_item is sample_videos[1]
             assert app._current_video_id == sample_videos[1].id
 
     run(go())
@@ -175,7 +179,7 @@ def test_populate_playlists_shows_drilldown():
             pls = [Playlist(id="PLa", title="A", count=2), Playlist(id="PLb", title="B")]
             app._populate_playlists(pls, "Playlists")
             await pilot.pause()
-            assert app.query_one("#results", ListView).border_title == "Playlists (2)"
+            assert app.query_one("#grid").border_title == "Playlists (2)"
 
     run(go())
 
@@ -230,6 +234,7 @@ def test_play_without_mpv_notifies(sample_videos, monkeypatch):
         async with app.run_test() as pilot:
             app._populate_videos(sample_videos, "Home")
             await pilot.pause()
+            await pilot.pause()  # first card focuses -> becomes the selection
             monkeypatch.setattr(player_mod, "mpv_path", lambda: None)
             notes: list = []
             monkeypatch.setattr(app, "notify", lambda *a, **k: notes.append((a, k)))
@@ -281,7 +286,7 @@ def test_auth_error_shows_cookie_trouble(monkeypatch):
             monkeypatch.setattr(app, "notify", lambda *a, **k: None)
             app._on_load_error("LL: YouTube said: The playlist does not exist.")
             assert calls
-            assert app.query_one("#results", ListView).border_title == "Sign-in problem"
+            assert app.query_one("#grid").border_title == "Sign-in problem"
 
     run(go())
 
