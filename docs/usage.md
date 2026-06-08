@@ -110,7 +110,13 @@ The control bar is fully mouse-driven, with keyboard shortcuts too:
 | Skip back / forward 5s | click ⏮ / ⏭ | `←` / `→` |
 | Seek to a position | click anywhere on the seek bar | — |
 | Volume | click on the volume bar | `↑` / `↓` |
+| Next / previous video in the feed | — | `n` / `b` |
 | Close | click ✕ | `q` / `Esc` |
+
+The player carries the **whole feed you opened from**, so `n` / `b` step through
+it. Opening a video from the **Shorts** feed turns on **autoplay**: when a Short
+ends it automatically rolls into the next one (the title shows `3/40`); it stops
+at the end of the feed. Other feeds don't autoplay — they just enable `n` / `b`.
 
 The video plays at ≤360p (tunable via `BOXTUBE_PLAYER_HEIGHT`) and is rendered
 on a steady timer (`BOXTUBE_PLAYER_FPS`) with your terminal's graphics protocol

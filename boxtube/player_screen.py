@@ -85,16 +85,33 @@ class PlayerScreen(Screen):
         Binding("right", "forward", "+5s", show=True),
         Binding("up", "vol_up", "Vol+", show=False),
         Binding("down", "vol_down", "Vol-", show=False),
+        Binding("n", "next", "Next", show=True),
+        Binding("b", "prev", "Prev", show=True),
         Binding("q,escape", "close", "Close", show=True),
     ]
 
-    def __init__(self, video: Video, cookies: str | None = None) -> None:
+    def __init__(
+        self,
+        video: Video,
+        cookies: str | None = None,
+        *,
+        playlist: list[Video] | None = None,
+        index: int = 0,
+        autoplay: bool = False,
+    ) -> None:
         super().__init__()
         self.video = video
         self.cookies = cookies
+        # The feed this video came from, so we can advance to the next clip. When
+        # autoplay is on (Shorts), reaching EOF rolls into the next item instead
+        # of closing. n / b (and the end of a clip) move through the playlist.
+        self.playlist = playlist if playlist else [video]
+        self.index = index if 0 <= index < len(self.playlist) else 0
+        self.autoplay = autoplay
         self.engine: MpvEngine | None = None
         self._stop = False
         self._close_started = False
+        self._switching = False
         self._pump_running = False
         self._duration = 0.0
         # Decoupled capture/render: the capture thread writes the latest frame
@@ -122,9 +139,7 @@ class PlayerScreen(Screen):
     def on_mount(self) -> None:
         self.query_one("#pl-seek", ClickBar).set_fraction(0.0)
         self.query_one("#pl-vol", ClickBar).set_fraction(100 / 130)
-        self.query_one("#pl-title", Static).update(
-            f"[b #ff8a8a]{_esc(self.video.title)}[/]  [#6f6f78]· loading…[/]"
-        )
+        self._set_title(loading=True)
         # Plain daemon threads (not Textual workers): the app shutdown sequence
         # waits for workers to finish, which would deadlock against an infinite
         # frame pump. Daemon threads are not awaited and check self._stop.
@@ -171,7 +186,7 @@ class PlayerScreen(Screen):
         if self._stop:
             return
         self._duration = float(self.engine.get("duration") or 0)
-        self.query_one("#pl-title", Static).update(f"[b #ff8a8a]{_esc(self.video.title)}[/]")
+        self._set_title()
         self.query_one("#pl-pause", Button).label = "⏸"
         # Capture runs on a daemon thread; the UI renders the latest frame on a
         # steady Textual timer so cadence is even and slow frames are dropped.
@@ -213,7 +228,7 @@ class PlayerScreen(Screen):
                     pass
             time.sleep(max(0.0, period - (time.time() - t0)))
         if not self._stop:
-            self._safe_call(self._schedule_close)  # reached EOF
+            self._safe_call(self._on_playback_ended)  # reached EOF
 
     def _render_tick(self) -> None:
         """Runs on the UI thread on a fixed interval; shows the latest frame."""
@@ -246,6 +261,72 @@ class PlayerScreen(Screen):
         except Exception:
             pass
 
+    def _set_title(self, *, loading: bool = False) -> None:
+        pos = ""
+        if len(self.playlist) > 1:
+            pos = f"  [#6f6f78]· {self.index + 1}/{len(self.playlist)}[/]"
+        suffix = "  [#6f6f78]· loading…[/]" if loading else ""
+        try:
+            self.query_one("#pl-title", Static).update(
+                f"[b #ff8a8a]{_esc(self.video.title)}[/]{pos}{suffix}"
+            )
+        except Exception:
+            pass
+
+    # ----- playlist navigation ------------------------------------------
+
+    def _on_playback_ended(self) -> None:
+        """Called on natural EOF. Auto-advance when enabled, else close."""
+        if self._close_started:
+            return
+        if self.autoplay and self.index + 1 < len(self.playlist):
+            self._go(1)
+        else:
+            self._schedule_close()
+
+    def _go(self, delta: int) -> None:
+        """Move by ``delta`` within the playlist and play that clip in place."""
+        if self._close_started or self._switching:
+            return
+        target = self.index + delta
+        if not (0 <= target < len(self.playlist)):
+            return  # at an end of the playlist; do nothing
+        self.index = target
+        try:
+            asyncio.get_running_loop().create_task(self._switch_to(self.playlist[target]))
+        except RuntimeError:
+            pass
+
+    async def _switch_to(self, video: Video) -> None:
+        """Tear down the current clip and start the next one without leaving."""
+        if self._close_started:
+            return
+        self._switching = True
+        self._stop = True
+        # Let the capture pump observe _stop and finish its current iteration.
+        for _ in range(30):
+            if not self._pump_running:
+                break
+            await asyncio.sleep(0.02)
+        self._stop_playback()  # stops timer + quits old engine (sets _stop=True)
+        # Reset per-clip state for the new video.
+        self.video = video
+        self._stop = False
+        self._latest = None
+        self._shown = None
+        self._props = {}
+        self._duration = 0.0
+        try:
+            self.query_one("#pl-video", Image).image = _black_frame()
+            self.query_one("#pl-seek", ClickBar).set_fraction(0.0)
+            self.query_one("#pl-time", Label).update("0:00 / 0:00")
+            self.query_one("#pl-pause", Button).label = "▶"
+        except Exception:
+            pass
+        self._set_title(loading=True)
+        self._switching = False
+        threading.Thread(target=self._start_engine, daemon=True).start()
+
     # ----- actions -------------------------------------------------------
 
     def action_pause(self) -> None:
@@ -267,6 +348,12 @@ class PlayerScreen(Screen):
     def action_vol_down(self) -> None:
         if self.engine:
             self.engine.set_volume((self.engine.get("volume") or 100) - 5)
+
+    def action_next(self) -> None:
+        self._go(1)
+
+    def action_prev(self) -> None:
+        self._go(-1)
 
     async def action_close(self) -> None:
         if self._close_started:

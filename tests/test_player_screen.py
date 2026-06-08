@@ -136,6 +136,76 @@ def test_controls_drive_engine():
     run(go())
 
 
+async def _wait_playing(scr, video_id):
+    for _ in range(80):
+        await asyncio.sleep(0.05)
+        if scr.video.id == video_id and scr.engine and scr._duration > 0:
+            return
+    raise AssertionError(f"player did not start playing {video_id}")
+
+
+def test_autoplay_advances_to_next_on_eof():
+    async def go():
+        app = BoxTube()
+        async with app.run_test():
+            v1 = Video(id="a", title="A", channel="c", duration=100, views=1)
+            v2 = Video(id="b", title="B", channel="c", duration=100, views=1)
+            scr = PlayerScreen(v1, playlist=[v1, v2], index=0, autoplay=True)
+            app.push_screen(scr)
+            await _wait_playing(scr, "a")
+            # Simulate the capture loop reaching end-of-file.
+            scr._on_playback_ended()
+            await _wait_playing(scr, "b")
+            assert scr.index == 1
+            await scr.action_close()
+
+    run(go())
+
+
+def test_manual_next_and_prev_walk_playlist():
+    async def go():
+        app = BoxTube()
+        async with app.run_test():
+            v1 = Video(id="a", title="A", channel="c", duration=100, views=1)
+            v2 = Video(id="b", title="B", channel="c", duration=100, views=1)
+            scr = PlayerScreen(v1, playlist=[v1, v2], index=0, autoplay=False)
+            app.push_screen(scr)
+            await _wait_playing(scr, "a")
+            scr.action_next()
+            await _wait_playing(scr, "b")
+            assert scr.index == 1
+            # Past the end is a no-op (doesn't close or wrap).
+            scr.action_next()
+            await asyncio.sleep(0.1)
+            assert scr.index == 1 and isinstance(app.screen, PlayerScreen)
+            scr.action_prev()
+            await _wait_playing(scr, "a")
+            assert scr.index == 0
+            await scr.action_close()
+
+    run(go())
+
+
+def test_no_autoplay_closes_on_eof():
+    async def go():
+        app = BoxTube()
+        async with app.run_test() as pilot:
+            v1 = Video(id="a", title="A", channel="c", duration=100, views=1)
+            v2 = Video(id="b", title="B", channel="c", duration=100, views=1)
+            scr = PlayerScreen(v1, playlist=[v1, v2], index=0, autoplay=False)
+            app.push_screen(scr)
+            await _wait_playing(scr, "a")
+            scr._on_playback_ended()  # EOF without autoplay → close
+            for _ in range(40):
+                await pilot.pause()
+                await asyncio.sleep(0.02)
+                if not isinstance(app.screen, PlayerScreen):
+                    break
+            assert not isinstance(app.screen, PlayerScreen)
+
+    run(go())
+
+
 def test_player_close_returns_to_main():
     async def go():
         app = BoxTube()

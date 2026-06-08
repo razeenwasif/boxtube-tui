@@ -710,7 +710,15 @@ class BoxTube(App[None]):
         # send them by default. Age-restricted videos already play cookie-free.
         # Opt in with BOXTUBE_PLAYBACK_COOKIES=1 for private/members-only videos.
         cookies = account.cookies_arg() if os.environ.get("BOXTUBE_PLAYBACK_COOKIES") else None
-        self.push_screen(PlayerScreen(video, cookies=cookies))
+        # Hand the player the whole feed so it can move to the next clip (n / b);
+        # Shorts roll into the next one automatically when one ends.
+        playlist = [c.item for c in self._cards if isinstance(c, VideoCard)]
+        index = next((i for i, v in enumerate(playlist) if v is video), 0)
+        if not playlist:
+            playlist, index = [video], 0
+        self.push_screen(PlayerScreen(
+            video, cookies=cookies, playlist=playlist, index=index, autoplay=self._shorts_active,
+        ))
 
     # ----- messages / help ----------------------------------------------
 

@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Playlist-aware player / autoplay**: the player now carries the whole feed you
+  opened from. Press **`n`** / **`b`** to move to the next/previous video in place.
+  Opening from the **Shorts** feed enables **autoplay** — when a Short ends it
+  rolls straight into the next one (the title shows e.g. `3/40`), stopping at the
+  end of the feed. Other feeds enable `n` / `b` without autoplaying.
 - **Shorts**: a new **Shorts** filter chip loads a feed of YouTube Shorts
   aggregated from the Shorts tabs of the channels you're subscribed to
   (`youtube.shorts_feed` → `subscription_shorts`, fetched concurrently and

@@ -43,7 +43,7 @@ and a preview pane.
 | `account.py` | Sign-in state from a cookies file. `is_signed_in`, `cookies_arg`, `cookies_path`. |
 | `thumbnails.py` | Thumbnail download + **LRU cache**; `placeholder`, `for_card` (downscale for grid cells). |
 | `engine.py` | **Headless mpv** A/V engine over JSON IPC. `MpvEngine` (`start`, `get`/`set`, `seek`, `screenshot`, `quit`). |
-| `player_screen.py` | Custom player UI (`PlayerScreen`, `ClickBar`). Frame pump + mouse control bar. |
+| `player_screen.py` | Custom player UI (`PlayerScreen`, `ClickBar`). Frame pump + mouse control bar. Carries a `playlist`/`index`; `_switch_to` plays the next clip in place; `autoplay` (Shorts) advances on EOF; `n`/`b` = next/prev. |
 | `player.py` | mpv `--vo`/`--hwdec` detection (`detect_vo`, `detect_hwdec`, `mpv_path`). `build_command`/`play` are legacy (unused by the app now; still tested). |
 | `opener.py` | WSL-aware browser open (`open_url`, `is_wsl`). |
 | `boxtube.tcss` | Theme — near-black `#0f0f0f`, light-red `#ff6b6b` accent. |
@@ -64,6 +64,7 @@ and a preview pane.
 12. **Thumbnail grid:** videos render as a responsive grid of focusable cards; richer preview pane.
 13. **Grid perf:** lazy **visible-first** thumbnail loading; then **pre-resize** card thumbnails + **debounced** scroll/scan.
 14. **Shorts:** light-red panel borders (`#grid`/`#detail-pane`); a **Shorts** chip (`run_shorts` → `youtube.shorts_feed`). The `#shorts` hashtag page only yields **one** entry under `--flat-playlist`, so Shorts are instead aggregated from subscribed channels' Shorts tabs (`subscription_shorts`: up to `SHORTS_MAX_CHANNELS=30` channels × `SHORTS_PER_CHANNEL=5`, fetched via a `ThreadPoolExecutor`, interleaved round-robin; channel name stamped from the sub since the Shorts tab omits the uploader). Hashtag is a signed-out fallback. Shorts play in the normal player (pillarboxed, being vertical).
+15. **Playlist-aware player / autoplay:** `PlayerScreen` now takes `playlist`/`index`/`autoplay`. `app._watch` passes the current feed (VideoCards) + the clicked index, with `autoplay=self._shorts_active`. EOF routes through `_on_playback_ended` → auto-advance (Shorts) or close; `_switch_to(video)` tears down and restarts the engine in place (guarded by `_switching`); `n`/`b` step the playlist; title shows `i/N`. mpv `--idle=no` means it exits at EOF, which the capture loop already detects.
 
 ## Key decisions & gotchas (read before changing related code)
 
