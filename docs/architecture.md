@@ -58,7 +58,8 @@ The left nav (`NAV_ITEMS` in `app.py`) maps each tab to a yt-dlp target:
 | Watch Later | `youtube.watch_later` | `playlist?list=WL` | cookies |
 | Playlists | `youtube.user_playlists` → `playlist_videos` | `/feed/playlists` → `playlist?list=<id>` | cookies |
 | Subscriptions (sidebar) | `youtube.subscribed_channels` → `channel_videos` | `/feed/channels` → `/channel/<id>/videos` | cookies |
-| Filter chips | `youtube.search` (or Home for "All") | `ytsearchN:<chip>` | none |
+| Shorts chip | `youtube.shorts_feed` → `subscription_shorts` (concurrent `channel_shorts`, interleaved); `/hashtag/shorts` fallback | `/channel/<id>/shorts` per sub | cookies |
+| Filter chips | `youtube.search` (or Home for "All", Shorts feed for "Shorts") | `ytsearchN:<chip>` | none |
 | Search (header) | `youtube.search` | `ytsearchN:<query>` | none |
 
 All feed loaders funnel through one internal runner, `youtube._entries(target,

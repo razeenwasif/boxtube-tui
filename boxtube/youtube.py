@@ -7,6 +7,7 @@ liked, watch later, playlists) require a cookies file — see :mod:`boxtube.acco
 
 from __future__ import annotations
 
+import concurrent.futures
 import json
 import os
 import shutil
@@ -84,6 +85,20 @@ FEED_PLAYLISTS = "https://www.youtube.com/feed/playlists"
 FEED_CHANNELS = "https://www.youtube.com/feed/channels"
 PLAYLIST_LIKED = "https://www.youtube.com/playlist?list=LL"
 PLAYLIST_WATCH_LATER = "https://www.youtube.com/playlist?list=WL"
+
+# YouTube Shorts. There's no personalized Shorts feed endpoint, and the public
+# #shorts hashtag page only ever yields a single entry under --flat-playlist, so
+# we build a Shorts feed from the Shorts tabs of the channels you're subscribed
+# to (each channel exposes /channel/<id>/shorts). Shorts are ordinary videos with
+# a vertical aspect, so they play through the normal engine.
+HASHTAG_SHORTS = "https://www.youtube.com/hashtag/shorts"
+# YouTube now allows Shorts up to 3 minutes; keep a generous cap as a guard
+# against the occasional long-form video that leaks in.
+SHORTS_MAX_SECONDS = 180
+# How widely to gather subscription Shorts: scan up to this many subscribed
+# channels, pulling a few Shorts from each, fetched concurrently.
+SHORTS_MAX_CHANNELS = 30
+SHORTS_PER_CHANNEL = 5
 
 
 def human_number(n: int | None) -> str:
@@ -258,6 +273,74 @@ def search(query: str, limit: int = 25, cookies: str | None = None) -> list[Vide
 
 def subscriptions_feed(limit: int = 40, cookies: str | None = None) -> list[Video]:
     return _dicts_to_videos(_entries(FEED_SUBSCRIPTIONS, limit=limit, cookies=cookies))
+
+
+def channel_shorts(channel_id: str, limit: int = SHORTS_PER_CHANNEL,
+                   cookies: str | None = None) -> list[Video]:
+    """Return Shorts from a single channel's Shorts tab (``/channel/<id>/shorts``).
+
+    Returns an empty list (rather than raising) when the channel has no Shorts
+    tab or yt-dlp produces no output, so a multi-channel gather doesn't abort.
+    """
+    url = f"https://www.youtube.com/channel/{channel_id}/shorts"
+    try:
+        return _dicts_to_videos(_entries(url, limit=limit, cookies=cookies))
+    except SearchError:
+        return []
+
+
+def subscription_shorts(limit: int = 40, cookies: str | None = None) -> list[Video]:
+    """Aggregate Shorts from the channels you're subscribed to.
+
+    Scans up to :data:`SHORTS_MAX_CHANNELS` subscribed channels (concurrently),
+    pulling a handful of Shorts from each, then interleaves them round-robin so
+    the feed isn't dominated by a single prolific channel.
+    """
+    channels = subscribed_channels(limit=SHORTS_MAX_CHANNELS, cookies=cookies)
+    if not channels:
+        return []
+
+    def _fetch(channel: Channel) -> tuple[str, list[Video]]:
+        vids = channel_shorts(channel.id, limit=SHORTS_PER_CHANNEL, cookies=cookies)
+        # Shorts-tab entries omit the uploader field; we know it from the channel.
+        for v in vids:
+            if v.channel == "Unknown channel":
+                v.channel = channel.name
+        return channel.id, vids
+
+    by_channel: dict[str, list[Video]] = {}
+    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as pool:
+        for cid, vids in pool.map(_fetch, channels):
+            by_channel[cid] = vids
+
+    # Round-robin interleave (one Short per channel per pass).
+    ordered = [by_channel.get(c.id, []) for c in channels]
+    feed: list[Video] = []
+    row = 0
+    while any(row < len(lst) for lst in ordered) and len(feed) < limit:
+        for lst in ordered:
+            if row < len(lst):
+                feed.append(lst[row])
+                if len(feed) >= limit:
+                    break
+        row += 1
+    return feed
+
+
+def shorts_feed(limit: int = 40, cookies: str | None = None) -> list[Video]:
+    """Return a Shorts feed.
+
+    When signed in, this is built from your subscribed channels' Shorts tabs. As a
+    best-effort fallback (e.g. signed out, or no subscription Shorts found) it uses
+    the public ``#shorts`` hashtag page, scoped to short clips via
+    :data:`SHORTS_MAX_SECONDS`.
+    """
+    if cookies:
+        subs = subscription_shorts(limit=limit, cookies=cookies)
+        if subs:
+            return subs
+    videos = _dicts_to_videos(_entries(HASHTAG_SHORTS, limit=limit, cookies=cookies))
+    return [v for v in videos if v.duration is None or v.duration <= SHORTS_MAX_SECONDS]
 
 
 def watch_history(limit: int = 40, cookies: str | None = None) -> list[Video]:

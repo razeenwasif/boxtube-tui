@@ -41,8 +41,9 @@ SOURCE_TITLES = {
     "playlists": "Playlists",
 }
 
-# Filter chips under the header. "All" returns to Home; the rest run a search.
-CHIPS = ["All", "Music", "Gaming", "News", "Live", "Podcasts", "Learning", "Sports", "Comedy", "Mixes"]
+# Filter chips under the header. "All" returns to Home, "Shorts" loads the
+# Shorts feed; the rest run a search.
+CHIPS = ["All", "Shorts", "Music", "Gaming", "News", "Live", "Podcasts", "Learning", "Sports", "Comedy", "Mixes"]
 
 # Sources that require a valid signed-in session.
 FEED_KEYS = {"home", "history", "liked", "watch_later", "playlists"}
@@ -201,6 +202,7 @@ class BoxTube(App[None]):
         self._drill_playlist: Playlist | None = None
         self._drill_channel: Channel | None = None
         self._last_query: str | None = None
+        self._shorts_active: bool = False
         self._cards: list[Card] = []
         self._cols: int = 1
         self._focused_item = None
@@ -270,11 +272,19 @@ class BoxTube(App[None]):
         self._set_active_chip(event.label)
         if event.label == "All":
             self._open_source("home")
+        elif event.label == "Shorts":
+            self._current_source = None
+            self._drill_playlist = None
+            self._drill_channel = None
+            self._last_query = None
+            self._shorts_active = True
+            self.run_shorts()
         else:
             self._current_source = None
             self._drill_playlist = None
             self._drill_channel = None
             self._last_query = event.label
+            self._shorts_active = False
             self.run_search(event.label)
 
     def _set_active_chip(self, label: str) -> None:
@@ -293,6 +303,7 @@ class BoxTube(App[None]):
         self._drill_playlist = None
         self._drill_channel = None
         self._last_query = None
+        self._shorts_active = False
         self._set_active_chip("All" if key == "home" else "")
         for i, (k, _, _) in enumerate(NAV_ITEMS):
             if k == key:
@@ -415,6 +426,20 @@ class BoxTube(App[None]):
         self.call_from_thread(self._populate_channels, channels)
 
     @work(thread=True, exclusive=True, group="source")
+    def run_shorts(self) -> None:
+        cookies = account.cookies_arg()
+        self.call_from_thread(self._set_results_title, "Loading Shorts…")
+        try:
+            videos = youtube.shorts_feed(limit=40, cookies=cookies)
+        except SearchError as exc:
+            self.call_from_thread(self._on_load_error, str(exc))
+            return
+        except Exception as exc:  # pragma: no cover - defensive
+            self.call_from_thread(self._on_load_error, str(exc))
+            return
+        self.call_from_thread(self._populate_videos, videos, "Shorts")
+
+    @work(thread=True, exclusive=True, group="source")
     def run_search(self, query: str) -> None:
         cookies = account.cookies_arg()
         self.call_from_thread(self._set_results_title, "Searching…")
@@ -495,6 +520,7 @@ class BoxTube(App[None]):
                 self._drill_playlist = None
                 self._drill_channel = None
                 self._last_query = query
+                self._shorts_active = False
                 self._set_active_chip("")
                 self.run_search(query)
 
@@ -658,6 +684,8 @@ class BoxTube(App[None]):
             self.load_playlist(self._drill_playlist)
         elif self._drill_channel is not None:
             self.load_channel(self._drill_channel)
+        elif self._shorts_active:
+            self.run_shorts()
         elif self._current_source is not None:
             self._open_source(self._current_source)
         elif self._last_query:

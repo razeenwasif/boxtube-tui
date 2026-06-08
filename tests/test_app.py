@@ -73,6 +73,25 @@ def test_chip_search_runs_query(monkeypatch):
     run(go())
 
 
+def test_chip_shorts_loads_shorts(monkeypatch):
+    from boxtube.app import Chip
+
+    called = {}
+    monkeypatch.setattr(BoxTube, "run_shorts", lambda self: called.setdefault("hit", True))
+
+    async def go():
+        app = BoxTube()
+        async with app.run_test() as pilot:
+            app.on_chip_selected(Chip.Selected("Shorts"))
+            await pilot.pause()
+            assert called.get("hit") is True
+            assert app._shorts_active is True
+            active = [c.label for c in app.query(Chip) if c.has_class("-active")]
+            assert active == ["Shorts"]
+
+    run(go())
+
+
 def test_chip_all_opens_home(monkeypatch):
     from boxtube.app import Chip
 

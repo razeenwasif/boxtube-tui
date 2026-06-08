@@ -133,7 +133,7 @@ ListView#subs:focus > ChannelItem.-highlight {
     width: 3fr;
     height: 1fr;
     background: #181818;
-    border: round #303030;
+    border: round #ff6b6b;
     border-title-color: #f1f1f1;
     border-title-style: bold;
     margin: 0 1;
@@ -156,7 +156,7 @@ ListView#subs:focus > ChannelItem.-highlight {
     width: 2fr;
     height: 1fr;
     background: #181818;
-    border: round #303030;
+    border: round #ff6b6b;
     border-title-color: #f1f1f1;
     border-title-style: bold;
     padding: 1 2;

@@ -16,7 +16,7 @@ the [accounts guide](accounts.md) to enable personalized tabs.
 
 ```
 ▶ BoxTube            ╭──────── Search ────────╮              ◉ You        ← header
- [All] Music Gaming News Live Podcasts Learning Sports …                  ← filter chips
+ [All] Shorts Music Gaming News Live Podcasts Learning Sports …           ← filter chips
 ╭ You ───────╮╭ Home — Subscriptions (40) ──╮╭─ Preview ──────────────╮
 │ 🏠 Home    ││ ▓▓▓▓▓   ▓▓▓▓▓   ▓▓▓▓▓        ││     [ thumbnail ]      │
 │ 🕘 History ││ Title…  Title…  Title…       ││                        │
@@ -31,7 +31,8 @@ the [accounts guide](accounts.md) to enable personalized tabs.
 
 - **Header** — the ▶ BoxTube logo, a centered search bar (type + **Enter**; works
   signed out), and your sign-in status on the right (`◉ You` / `○ Sign in`).
-- **Filter chips** — click a category pill to search it; **All** returns to Home.
+- **Filter chips** — click a category pill to search it; **All** returns to Home;
+  **Shorts** loads a feed of YouTube Shorts from your subscribed channels.
 - **Sidebar** — a **You** group (Home, History, Playlists, Watch Later, Liked) and
   a **Subscriptions** group listing your subscribed channels.
 - **Grid** — a responsive grid of video cards (thumbnail + title + channel · views
@@ -76,7 +77,11 @@ press `?` any time for them, and `r` to refresh once you've added cookies.
   Click one (or focus the list and press **Enter**) to load that channel's
   videos; **Backspace** goes back.
 - The **filter chips** under the header run a search for that category (e.g.
-  *Music*, *Gaming*). **All** returns to your Home feed.
+  *Music*, *Gaming*). **All** returns to your Home feed. **Shorts** loads a feed
+  of YouTube Shorts gathered from the **Shorts tabs of the channels you're
+  subscribed to** (interleaved so no single channel dominates). When signed out
+  it falls back to the public `#shorts` hashtag. Shorts play in the normal
+  player; being vertical, they appear pillarboxed (bars left and right).
 
 ### Playlists (drill-down)
 

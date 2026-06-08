@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Shorts**: a new **Shorts** filter chip loads a feed of YouTube Shorts
+  aggregated from the Shorts tabs of the channels you're subscribed to
+  (`youtube.shorts_feed` → `subscription_shorts`, fetched concurrently and
+  interleaved round-robin so no single channel dominates). Falls back to the
+  public `#shorts` hashtag when signed out. Shorts play through the normal
+  player (they appear pillarboxed, being vertical).
 - **Thumbnail grid**: videos now render in a responsive grid of focusable cards
   (thumbnail + title + channel · views · duration) instead of a list. Arrow keys
   move through the grid, Enter/double-click plays, and the column count adapts to
@@ -50,6 +56,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Makefile` with common developer tasks and a `tests/` suite.
 
 ### Changed
+- The main **grid** and **preview** panel borders are now the light-red accent
+  (`#ff6b6b`) instead of grey, for a stronger framed look.
 - `youtube.search()` and `player.play()` now accept an optional `cookies`
   argument; feed loaders share one internal yt-dlp runner.
 - **Player performance**: decoupled frame capture from rendering — a daemon

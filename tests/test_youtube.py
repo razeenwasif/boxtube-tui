@@ -273,6 +273,60 @@ def test_user_playlists_parsing(monkeypatch):
     assert playlists[0].count == 4
 
 
+def test_shorts_feed_aggregates_subscription_shorts(monkeypatch):
+    from boxtube.youtube import Channel
+
+    chans = [Channel(id="UC1", name="Alpha"), Channel(id="UC2", name="Beta")]
+    monkeypatch.setattr(youtube, "subscribed_channels", lambda limit, cookies: chans)
+
+    def _channel_shorts(cid, limit, cookies):
+        # Shorts-tab entries carry no uploader; default channel name.
+        return [
+            Video(id=f"{cid}-a", title="s1", channel="Unknown channel", duration=None, views=None),
+            Video(id=f"{cid}-b", title="s2", channel="Unknown channel", duration=None, views=None),
+        ]
+
+    monkeypatch.setattr(youtube, "channel_shorts", _channel_shorts)
+
+    vids = youtube.shorts_feed(limit=40, cookies="/ck")
+    # Round-robin: one from each channel before the second from either.
+    assert [v.id for v in vids] == ["UC1-a", "UC2-a", "UC1-b", "UC2-b"]
+    # The channel name is stamped from the subscription, not left "Unknown".
+    assert vids[0].channel == "Alpha" and vids[1].channel == "Beta"
+
+
+def test_channel_shorts_swallows_error(monkeypatch):
+    # A channel with no Shorts tab must yield [] rather than raising.
+    monkeypatch.setattr(youtube, "find_ytdlp", lambda: "/usr/bin/yt-dlp")
+    monkeypatch.setattr(
+        youtube.subprocess, "run", _fake_run_factory("", stderr="no shorts", returncode=1)
+    )
+    assert youtube.channel_shorts("UCnope", cookies="/ck") == []
+
+
+def test_shorts_feed_uses_hashtag_and_filters_long(monkeypatch):
+    monkeypatch.setattr(youtube, "find_ytdlp", lambda: "/usr/bin/yt-dlp")
+    captured = {}
+    lines = "\n".join(
+        json.dumps(d)
+        for d in [
+            {"id": "short111111", "ie_key": "Youtube", "title": "A short", "duration": 31},
+            {"id": "noduration1", "ie_key": "Youtube", "title": "No duration", "duration": None},
+            {"id": "longvideo01", "ie_key": "Youtube", "title": "Too long", "duration": 600},
+        ]
+    )
+
+    def _capture(cmd, capture_output=True, text=True):
+        captured["cmd"] = cmd
+        return SimpleNamespace(stdout=lines, stderr="", returncode=0)
+
+    monkeypatch.setattr(youtube.subprocess, "run", _capture)
+    videos = youtube.shorts_feed(limit=20, cookies=None)
+    # The 600s video is dropped; the short and the unknown-duration one stay.
+    assert [v.id for v in videos] == ["short111111", "noduration1"]
+    assert youtube.HASHTAG_SHORTS in captured["cmd"]
+
+
 def test_feed_separates_videos_from_playlists(monkeypatch):
     monkeypatch.setattr(youtube, "find_ytdlp", lambda: "/usr/bin/yt-dlp")
     lines = "\n".join(

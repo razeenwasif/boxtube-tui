@@ -15,7 +15,7 @@ using your terminal's native graphics protocol when available. No API key requir
 
 ```
 ▶ BoxTube            ╭──────── Search ────────╮                  ◉ You
- [All] Music Gaming News Live Podcasts Learning Sports Comedy Mixes
+ [All] Shorts Music Gaming News Live Podcasts Learning Sports Comedy Mixes
 ╭ You ───────╮╭ Home — Subscriptions (24) ──╮╭─ Preview ────────────────╮
 │ 🏠 Home    ││ ▓▓▓▓▓▓   ▓▓▓▓▓▓   ▓▓▓▓▓▓     ││      ░▒▓ thumbnail ▓▒░   │
 │ 🕘 History ││ Title…   Title…   Title…     ││                          │
@@ -45,9 +45,9 @@ using your terminal's native graphics protocol when available. No API key requir
 ## Features
 
 - **YouTube-styled layout** — a header with a centered search bar, a row of filter
-  chips, a left sidebar (Home / History / Playlists / Watch Later / Liked plus your
-  **subscribed channels**), a **responsive thumbnail grid** of videos, and a
-  preview pane with the highlighted video's details.
+  chips (including a **Shorts** feed), a left sidebar (Home / History / Playlists /
+  Watch Later / Liked plus your **subscribed channels**), a **responsive thumbnail
+  grid** of videos, and a preview pane with the highlighted video's details.
 - **Sign in for your feed** — browse your subscriptions feed, watch history, liked
   videos, watch later, playlists, and per-channel videos. Auth is via a
   browser-exported cookies file (no passwords). See the

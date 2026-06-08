@@ -39,7 +39,7 @@ and a preview pane.
 | Module | Responsibility |
 |--------|----------------|
 | `app.py` | Textual UI + controller. Header/chips/sidebar/grid/preview. `BoxTube(App)`, card widgets (`VideoCard`/`PlaylistCard`/`Card`), `NavItem`/`ChannelItem`/`Chip`, `CardSelected`/`CardActivated` messages. |
-| `youtube.py` | yt-dlp search + feeds. `Video`/`Playlist`/`Channel`, `search`, `videos_for_feed`, `user_playlists`/`playlist_videos`, `subscribed_channels`/`channel_videos`, `find_ytdlp`/`find_js_runtime`. One internal runner `_entries`. |
+| `youtube.py` | yt-dlp search + feeds. `Video`/`Playlist`/`Channel`, `search`, `videos_for_feed`, `shorts_feed` (#shorts hashtag), `user_playlists`/`playlist_videos`, `subscribed_channels`/`channel_videos`, `find_ytdlp`/`find_js_runtime`. One internal runner `_entries`. |
 | `account.py` | Sign-in state from a cookies file. `is_signed_in`, `cookies_arg`, `cookies_path`. |
 | `thumbnails.py` | Thumbnail download + **LRU cache**; `placeholder`, `for_card` (downscale for grid cells). |
 | `engine.py` | **Headless mpv** A/V engine over JSON IPC. `MpvEngine` (`start`, `get`/`set`, `seek`, `screenshot`, `quit`). |
@@ -63,6 +63,7 @@ and a preview pane.
 11. **YouTube-styled UI redesign:** header (logo + centered search + auth), filter **chips**, sidebar grouped into **You** + **Subscriptions** (live subscribed channels via `feed/channels` + cookies), channel drill-down.
 12. **Thumbnail grid:** videos render as a responsive grid of focusable cards; richer preview pane.
 13. **Grid perf:** lazy **visible-first** thumbnail loading; then **pre-resize** card thumbnails + **debounced** scroll/scan.
+14. **Shorts:** light-red panel borders (`#grid`/`#detail-pane`); a **Shorts** chip (`run_shorts` → `youtube.shorts_feed`). The `#shorts` hashtag page only yields **one** entry under `--flat-playlist`, so Shorts are instead aggregated from subscribed channels' Shorts tabs (`subscription_shorts`: up to `SHORTS_MAX_CHANNELS=30` channels × `SHORTS_PER_CHANNEL=5`, fetched via a `ThreadPoolExecutor`, interleaved round-robin; channel name stamped from the sub since the Shorts tab omits the uploader). Hashtag is a signed-out fallback. Shorts play in the normal player (pillarboxed, being vertical).
 
 ## Key decisions & gotchas (read before changing related code)
 
