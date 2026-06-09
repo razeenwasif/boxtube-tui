@@ -172,10 +172,16 @@ class PlayerScreen(Screen):
         self.playlist = playlist if playlist else [video]
         self.index = index if 0 <= index < len(self.playlist) else 0
         self.autoplay = autoplay
+        # Read settings fresh per playback so the Settings screen takes effect
+        # on the next video without a restart.
+        self._fps = _env_int("BOXTUBE_PLAYER_FPS", 15, 1, 60)
+        self._height = _env_int("BOXTUBE_PLAYER_HEIGHT", 360, 144, 1080)
+        self._maxw = _env_int("BOXTUBE_PLAYER_MAXWIDTH", 480, 240, 3840)
+        self._image_cls = _player_image_class()
         self._backend = _active_backend()
         # Target frame width in pixels; recomputed from the widget's on-screen
         # size once the layout settles (see _recompute_target).
-        self._target_w = DISPLAY_WIDTH_FALLBACK
+        self._target_w = min(self._maxw, DISPLAY_WIDTH_FALLBACK)
         self.engine: MpvEngine | None = None
         self._stop = False
         self._close_started = False
@@ -192,7 +198,7 @@ class PlayerScreen(Screen):
     def compose(self) -> ComposeResult:
         yield Static(f"[b #ff8a8a]{self.video.title}[/]", id="pl-title", markup=True)
         with Center(id="pl-stage"):
-            yield PlayerImage(_black_frame(), id="pl-video")
+            yield self._image_cls(_black_frame(), id="pl-video")
         with Horizontal(id="pl-controls"):
             yield Button("⏮", id="pl-back")
             yield Button("▶", id="pl-pause")
@@ -234,7 +240,7 @@ class PlayerScreen(Screen):
     # ----- engine lifecycle ---------------------------------------------
 
     def _start_engine(self) -> None:
-        engine = MpvEngine(self.video.watch_url, cookies=self.cookies, max_height=PLAYER_HEIGHT)
+        engine = MpvEngine(self.video.watch_url, cookies=self.cookies, max_height=self._height)
         try:
             engine.start()
         except Exception as exc:
@@ -260,7 +266,7 @@ class PlayerScreen(Screen):
         # Capture runs on a daemon thread; the UI renders the latest frame on a
         # steady Textual timer so cadence is even and slow frames are dropped.
         threading.Thread(target=self._capture, daemon=True).start()
-        self._render_timer = self.set_interval(1.0 / PLAYER_FPS, self._render_tick)
+        self._render_timer = self.set_interval(1.0 / self._fps, self._render_tick)
 
     def on_resize(self, event) -> None:
         self._recompute_target()
@@ -273,11 +279,11 @@ class PlayerScreen(Screen):
         more pixels than it can paint.
         """
         try:
-            cells = self.query_one("#pl-video", PlayerImage).size.width
+            cells = self.query_one("#pl-video", self._image_cls).size.width
         except Exception:
             cells = 0
         if cells:
-            self._target_w = max(160, min(MAX_DISPLAY_WIDTH, cells * _cell_px_width()))
+            self._target_w = max(160, min(self._maxw, cells * _cell_px_width()))
 
     def _capture(self) -> None:
         self._pump_running = True
@@ -287,7 +293,7 @@ class PlayerScreen(Screen):
             self._pump_running = False
 
     def _capture_loop(self) -> None:
-        period = 1.0 / PLAYER_FPS
+        period = 1.0 / self._fps
         while not self._stop and self.engine and self.engine.is_alive():
             t0 = time.time()
             paused = False
@@ -326,7 +332,7 @@ class PlayerScreen(Screen):
         if img is not None and img is not self._shown:
             self._shown = img
             try:
-                self.query_one("#pl-video", PlayerImage).image = img
+                self.query_one("#pl-video", self._image_cls).image = img
             except Exception:
                 pass
         if self._props:
@@ -407,7 +413,7 @@ class PlayerScreen(Screen):
         self._props = {}
         self._duration = 0.0
         try:
-            self.query_one("#pl-video", PlayerImage).image = _black_frame()
+            self.query_one("#pl-video", self._image_cls).image = _black_frame()
             self.query_one("#pl-seek", ClickBar).set_fraction(0.0)
             self.query_one("#pl-time", Label).update("0:00 / 0:00")
             self.query_one("#pl-pause", Button).label = "▶"

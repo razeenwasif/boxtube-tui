@@ -48,6 +48,9 @@ using your terminal's native graphics protocol when available. No API key requir
   chips (including a **Shorts** feed), a left sidebar (Home / History / Playlists /
   Watch Later / Liked plus your **subscribed channels**), a **responsive thumbnail
   grid** of videos, and a preview pane with the highlighted video's details.
+- **In-app settings** — press `,` (or click the ⚙) to tune video quality, image
+  backend, grid density, and more; saved to `~/.config/boxtube/config.toml` and
+  applied without a restart.
 - **Sign in for your feed** — browse your subscriptions feed, watch history, liked
   videos, watch later, playlists, and per-channel videos. Auth is via a
   browser-exported cookies file (no passwords). See the

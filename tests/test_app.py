@@ -25,8 +25,10 @@ def run(coro):
 
 
 @pytest.fixture(autouse=True)
-def _offline(monkeypatch, fake_image):
+def _offline(monkeypatch, fake_image, tmp_path):
     """No network, signed out by default."""
+    # Isolate settings from any real ~/.config/boxtube/config.toml.
+    monkeypatch.setenv("BOXTUBE_CONFIG", str(tmp_path / "config.toml"))
     monkeypatch.setattr(thumb_mod, "fetch", lambda video_id, url: fake_image)
     monkeypatch.setattr(account_mod, "is_signed_in", lambda: False)
     monkeypatch.setattr(account_mod, "cookies_arg", lambda: None)
@@ -153,6 +155,38 @@ def test_channel_tabs_toggle_videos_shorts(monkeypatch):
             app._open_source("home")
             await pilot.pause()
             assert app.query_one("#channel-tabs").display is False
+
+    run(go())
+
+
+def test_action_settings_opens_screen():
+    from boxtube.settings_screen import SettingsScreen
+
+    async def go():
+        app = BoxTube()
+        async with app.run_test() as pilot:
+            app.action_settings()
+            await pilot.pause()
+            assert isinstance(app.screen, SettingsScreen)
+
+    run(go())
+
+
+def test_settings_saved_applies_grid_density(sample_videos):
+    from boxtube import config
+
+    async def go():
+        app = BoxTube()
+        async with app.run_test() as pilot:
+            app._populate_videos(sample_videos, "Home")
+            await pilot.pause()
+            await pilot.pause()
+            values = config.defaults()
+            values["grid_density"] = "comfortable"
+            app._on_settings_saved(values)
+            await pilot.pause()
+            assert app._card_width == config.GRID_DENSITY_WIDTH["comfortable"]
+            assert app.settings["grid_density"] == "comfortable"
 
     run(go())
 

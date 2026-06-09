@@ -3,6 +3,30 @@
 BoxTube favors zero-configuration defaults with sensible auto-detection. The few
 knobs that exist are documented here.
 
+## Settings screen & config file
+
+Most options below can be set from the in-app **Settings** screen — press **`,`**
+or click the **⚙** in the header. Choices are saved to a TOML config file at
+`~/.config/boxtube/config.toml` (override the path with `BOXTUBE_CONFIG`) and
+applied without a restart: grid density takes effect immediately, and player /
+thumbnail settings apply to the next video or fetch.
+
+Precedence: a `BOXTUBE_*` **environment variable set in your shell always wins**
+over the config file (the config is applied with `setdefault` at startup). So you
+can pin a value via the environment and the Settings screen won't override it.
+
+```toml
+# ~/.config/boxtube/config.toml  (managed by the Settings screen)
+player_height = 360
+player_maxwidth = 480
+player_fps = 15
+image_backend = "auto"
+screenshot_format = "jpg"
+thumb_cache = 64
+grid_density = "normal"
+playback_cookies = false
+```
+
 ## Environment variables
 
 | Variable | Values | Default | Effect |

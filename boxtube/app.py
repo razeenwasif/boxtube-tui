@@ -20,8 +20,9 @@ from textual.message import Message
 from textual.widgets import Footer, Input, Label, ListItem, ListView, Static
 from textual_image.widget import Image
 
-from . import account, opener, player, thumbnails, youtube
+from . import account, config, opener, player, thumbnails, youtube
 from .player_screen import PlayerScreen
+from .settings_screen import SettingsScreen
 from .youtube import Channel, Playlist, SearchError, Video
 
 # Left-nav items: (key, icon, label). All require sign-in.
@@ -167,6 +168,13 @@ class ChannelItem(ListItem):
         yield Label(f"[#ff6b6b]◍[/]  {_escape(self.channel.name)}", markup=True, classes="channel")
 
 
+class GearButton(Static):
+    """The ⚙ button in the header; opens the Settings screen."""
+
+    def on_click(self) -> None:
+        self.app.action_settings()
+
+
 class Chip(Static):
     """A clickable filter pill in the chips row."""
 
@@ -213,6 +221,7 @@ class BoxTube(App[None]):
         Binding("o", "open_browser", "Open", show=True),
         Binding("r", "refresh", "Refresh", show=True),
         Binding("question_mark", "help", "Sign in", show=True),
+        Binding("comma", "settings", "Settings", show=True),
         Binding("backspace", "back", "Back", show=False),
         Binding("escape", "focus_search", "Search", show=False),
         Binding("up", "grid_move('up')", "", show=False),
@@ -243,6 +252,10 @@ class BoxTube(App[None]):
         self._skel_pulse_on = False
         self._grid_is_shorts = False
         self._channel_tab = "videos"
+        self.settings = config.load()
+        self._card_width = config.GRID_DENSITY_WIDTH.get(
+            self.settings.get("grid_density", "normal"), CARD_WIDTH
+        )
 
     # ----- layout --------------------------------------------------------
 
@@ -252,6 +265,7 @@ class BoxTube(App[None]):
             with Horizontal(id="search-wrap"):
                 yield Input(placeholder="Search", id="search")
             yield Static("", id="auth", markup=True)
+            yield GearButton("⚙", id="gear")
         with HorizontalScroll(id="chips"):
             for label in CHIPS:
                 yield Chip(label)
@@ -600,7 +614,7 @@ class BoxTube(App[None]):
 
     def _compute_cols(self) -> int:
         width = self.query_one("#grid").content_size.width or 70
-        card_w = SHORTS_CARD_WIDTH if self._grid_is_shorts else CARD_WIDTH
+        card_w = SHORTS_CARD_WIDTH if self._grid_is_shorts else self._card_width
         return max(1, (width + GRID_GUTTER) // (card_w + GRID_GUTTER))
 
     def _show_skeletons(self, count: int = 12) -> None:
@@ -808,6 +822,26 @@ class BoxTube(App[None]):
     def action_help(self) -> None:
         self._show_signin_help()
 
+    # ----- settings ------------------------------------------------------
+
+    def action_settings(self) -> None:
+        self.push_screen(SettingsScreen(dict(self.settings)), self._on_settings_saved)
+
+    def _on_settings_saved(self, values: dict | None) -> None:
+        if not values:
+            return
+        self.settings = values
+        self._card_width = config.GRID_DENSITY_WIDTH.get(
+            values.get("grid_density", "normal"), CARD_WIDTH
+        )
+        # Grid density applies live; player/thumbnail settings take effect on the
+        # next playback / fetch (they read the env we just updated).
+        if self._cards:
+            self._cols = self._compute_cols()
+            self.query_one("#grid-inner", Grid).styles.grid_size_columns = self._cols
+            self._request_thumb_scan()
+        self.notify("Settings saved. Player changes apply to the next video.")
+
     # ----- playback ------------------------------------------------------
 
     def _watch(self, video: Video) -> None:
@@ -897,6 +931,9 @@ def _escape(text: str) -> str:
 
 
 def main() -> None:
+    # Push saved settings into the environment before the UI reads them; a
+    # shell-set BOXTUBE_* var still wins (apply_to_env uses setdefault).
+    config.apply_to_env(config.load())
     BoxTube().run()
 
 

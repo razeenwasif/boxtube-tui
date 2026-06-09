@@ -47,6 +47,18 @@ Screen {
     color: #aaaaaa;
 }
 
+#gear {
+    width: 3;
+    height: 3;
+    content-align: center middle;
+    color: #aaaaaa;
+    padding: 0 0 0 1;
+}
+
+#gear:hover {
+    color: #ff6b6b;
+}
+
 /* ----- filter chips ------------------------------------------------ */
 
 #chips {
@@ -363,6 +375,68 @@ PlayerScreen {
     width: 10;
     height: 1;
     margin: 1 1;
+}
+
+/* ----- settings screen --------------------------------------------- */
+
+SettingsScreen {
+    align: center middle;
+}
+
+#settings-dialog {
+    width: 72;
+    max-width: 90%;
+    height: auto;
+    max-height: 90%;
+    background: #181818;
+    border: round #ff6b6b;
+    padding: 1 2;
+}
+
+#settings-title {
+    height: 1;
+    color: #f1f1f1;
+    text-style: bold;
+    margin-bottom: 1;
+}
+
+#settings-body {
+    height: auto;
+    max-height: 24;
+    scrollbar-size-vertical: 1;
+    scrollbar-color: #303030;
+}
+
+.setting-row {
+    height: 3;
+    width: 1fr;
+}
+
+.setting-label {
+    width: 1fr;
+    height: 3;
+    content-align: left middle;
+    color: #f1f1f1;
+}
+
+.setting-control {
+    width: 26;
+}
+
+.setting-help {
+    height: auto;
+    color: #6f6f78;
+    margin: 0 0 1 0;
+}
+
+#settings-buttons {
+    height: 3;
+    align: right middle;
+    margin-top: 1;
+}
+
+#settings-buttons Button {
+    margin: 0 0 0 2;
 }
 
 /* ----- footer ------------------------------------------------------ */

@@ -33,6 +33,10 @@ the [accounts guide](accounts.md) to enable personalized tabs.
   signed out), and your sign-in status on the right (`◉ You` / `○ Sign in`).
 - **Filter chips** — click a category pill to search it; **All** returns to Home;
   **Shorts** loads a feed of YouTube Shorts from your subscribed channels.
+- **Settings** — press **`,`** or click the **⚙** in the header to open the
+  Settings screen (video quality, image backend, grid density, …). Choices are
+  saved to `~/.config/boxtube/config.toml` and applied without a restart. See
+  [configuration](configuration.md#settings-screen--config-file).
 - **Sidebar** — a **You** group (Home, History, Playlists, Watch Later, Liked) and
   a **Subscriptions** group listing your subscribed channels.
 - **Grid** — a responsive grid of video cards (thumbnail + title + channel · views

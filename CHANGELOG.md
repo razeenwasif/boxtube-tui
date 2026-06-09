@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Settings screen + config file**: press **`,`** (or click the **⚙** in the
+  header) to open an in-app Settings dialog for video resolution, frame width/rate,
+  image backend, capture format, thumbnail cache, grid density, and playback
+  cookies. Settings persist to `~/.config/boxtube/config.toml` (override with
+  `BOXTUBE_CONFIG`) and apply without a restart — grid density live, player
+  settings on the next video. A shell-set `BOXTUBE_*` env var still wins.
 - **Channel Videos / Shorts tabs**: drilling into a subscribed channel now shows a
   Videos | Shorts toggle above the grid; switching to Shorts loads that channel's
   Shorts tab and renders them as vertical cards.
