@@ -43,7 +43,7 @@ and a preview pane.
 | `account.py` | Sign-in state from a cookies file. `is_signed_in`, `cookies_arg`, `cookies_path`. |
 | `thumbnails.py` | Thumbnail download + **LRU cache**; `placeholder`, `for_card` (downscale for grid cells). |
 | `engine.py` | **Headless mpv** A/V engine over JSON IPC. `MpvEngine` (`start`, `get`/`set`, `seek`, `screenshot`, `quit`). |
-| `player_screen.py` | Custom player UI (`PlayerScreen`, `ClickBar`). Frame pump + mouse control bar. Carries a `playlist`/`index`; `_switch_to` plays the next clip in place; `autoplay` (Shorts) advances on EOF; `n`/`b` = next/prev. |
+| `player_screen.py` | Custom player UI (`PlayerScreen`, `ClickBar`). Frame pump + mouse control bar. Carries a `playlist`/`index`; `_switch_to` plays the next clip in place; `autoplay` (Shorts) advances on EOF; `n`/`b` = next/prev. Frames sized to the widget's pixel area (`_recompute_target`, LANCZOS); image backend via `PlayerImage`/`BOXTUBE_IMAGE_BACKEND`, shown in the title. |
 | `player.py` | mpv `--vo`/`--hwdec` detection (`detect_vo`, `detect_hwdec`, `mpv_path`). `build_command`/`play` are legacy (unused by the app now; still tested). |
 | `opener.py` | WSL-aware browser open (`open_url`, `is_wsl`). |
 | `boxtube.tcss` | Theme — near-black `#0f0f0f`, light-red `#ff6b6b` accent. |
@@ -65,6 +65,7 @@ and a preview pane.
 13. **Grid perf:** lazy **visible-first** thumbnail loading; then **pre-resize** card thumbnails + **debounced** scroll/scan.
 14. **Shorts:** light-red panel borders (`#grid`/`#detail-pane`); a **Shorts** chip (`run_shorts` → `youtube.shorts_feed`). The `#shorts` hashtag page only yields **one** entry under `--flat-playlist`, so Shorts are instead aggregated from subscribed channels' Shorts tabs (`subscription_shorts`: up to `SHORTS_MAX_CHANNELS=30` channels × `SHORTS_PER_CHANNEL=5`, fetched via a `ThreadPoolExecutor`, interleaved round-robin; channel name stamped from the sub since the Shorts tab omits the uploader). Hashtag is a signed-out fallback. Shorts play in the normal player (pillarboxed, being vertical).
 15. **Playlist-aware player / autoplay:** `PlayerScreen` now takes `playlist`/`index`/`autoplay`. `app._watch` passes the current feed (VideoCards) + the clicked index, with `autoplay=self._shorts_active`. EOF routes through `_on_playback_ended` → auto-advance (Shorts) or close; `_switch_to(video)` tears down and restarts the engine in place (guarded by `_switching`); `n`/`b` step the playlist; title shows `i/N`. mpv `--idle=no` means it exits at EOF, which the capture loop already detects.
+16. **Video quality:** frames sized to the `#pl-video` widget's on-screen pixel area (`_recompute_target` = cells × cell-px from `get_cell_size`, cap `BOXTUBE_PLAYER_MAXWIDTH=960`) instead of a fixed 480px; LANCZOS downscale (never upscale). Source cap 360p→**480p** (`PLAYER_HEIGHT`), capture JPEG q80→**92** (engine `_screenshot_quality`, optional PNG via `BOXTUBE_SCREENSHOT_FORMAT`). Backend selectable via `BOXTUBE_IMAGE_BACKEND` (else textual-image auto-detects sixel on WT / kitty on Ghostty), shown in the player title (`_active_backend`). **Audio is already maxed** (`bestaudio` ≈130k opus; no higher tier without Premium auth, which breaks extraction) — no audio knob.
 
 ## Key decisions & gotchas (read before changing related code)
 

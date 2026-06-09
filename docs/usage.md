@@ -118,7 +118,7 @@ it. Opening a video from the **Shorts** feed turns on **autoplay**: when a Short
 ends it automatically rolls into the next one (the title shows `3/40`); it stops
 at the end of the feed. Other feeds don't autoplay — they just enable `n` / `b`.
 
-The video plays at ≤360p (tunable via `BOXTUBE_PLAYER_HEIGHT`) and is rendered
+The video plays at ≤480p (tunable via `BOXTUBE_PLAYER_HEIGHT`) and is rendered
 on a steady timer (`BOXTUBE_PLAYER_FPS`) with your terminal's graphics protocol
 (kitty / sixel) or a unicode fallback — see
 [configuration → video output](configuration.md#video-output-boxtube_vo).
@@ -133,8 +133,11 @@ full resolution.
 ## Tips
 
 - Thumbnails are cached per video for the session, so re-visiting is instant.
-- The player streams at ≤360p by default — terminal cells are coarse, so lower
-  resolutions start faster and decode lighter. Tune with `BOXTUBE_PLAYER_HEIGHT`
-  / `BOXTUBE_PLAYER_FPS` (see [configuration](configuration.md#player-performance-boxtube_player_fps-boxtube_player_height)).
-- For the sharpest experience, run BoxTube in a kitty-graphics terminal
-  (kitty, Ghostty, WezTerm).
+- The player streams at ≤480p by default and sizes each frame to your terminal's
+  actual pixel area. Tune with `BOXTUBE_PLAYER_HEIGHT` / `BOXTUBE_PLAYER_FPS`
+  (see [configuration](configuration.md#player-performance-boxtube_player_fps-boxtube_player_height));
+  for quality knobs (backend, frame width, lossless capture) see
+  [video quality](configuration.md#video-quality-boxtube_image_backend-boxtube_player_height-screenshots).
+- For the sharpest experience, run BoxTube in a kitty-graphics terminal (kitty,
+  Ghostty, WezTerm) or a sixel terminal (Windows Terminal ≥ 1.22, foot). The
+  player title bar shows which backend is active.

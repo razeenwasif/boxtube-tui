@@ -25,6 +25,20 @@ class EngineError(Exception):
     """Raised when mpv can't start or load the stream."""
 
 
+def _screenshot_format() -> str:
+    """Frame image format: ``jpg`` (fast, default) or ``png`` (lossless, sharper)."""
+    fmt = os.environ.get("BOXTUBE_SCREENSHOT_FORMAT", "jpg").strip().lower()
+    return "png" if fmt == "png" else "jpg"
+
+
+def _screenshot_quality() -> int:
+    """JPEG quality for sampled frames (1-100). Higher = fewer artifacts."""
+    try:
+        return max(1, min(100, int(os.environ.get("BOXTUBE_SCREENSHOT_QUALITY", "92"))))
+    except ValueError:
+        return 92
+
+
 class MpvEngine:
     def __init__(self, url: str, *, cookies: str | None = None, max_height: int = 480) -> None:
         self.url = url
@@ -37,7 +51,8 @@ class MpvEngine:
         self._rid = 0
         self._dir = tempfile.mkdtemp(prefix="boxtube-mpv-")
         self._sock_path = os.path.join(self._dir, "mpv.sock")
-        self._frame_path = os.path.join(self._dir, "frame.jpg")
+        # screenshot-to-file infers the format from the filename extension.
+        self._frame_path = os.path.join(self._dir, f"frame.{_screenshot_format()}")
         self._err_path = os.path.join(self._dir, "mpv.err")
         self._err = None
 
@@ -56,8 +71,8 @@ class MpvEngine:
             "--vo=null",
             "--msg-level=all=error",
             f"--input-ipc-server={self._sock_path}",
-            "--screenshot-format=jpg",
-            "--screenshot-jpeg-quality=80",
+            f"--screenshot-format={_screenshot_format()}",
+            f"--screenshot-jpeg-quality={_screenshot_quality()}",
             f"--ytdl-format={fmt}",
             "--ytdl-raw-options-append=extractor-args=youtube:player_client=default,android_vr,tv",
         ]

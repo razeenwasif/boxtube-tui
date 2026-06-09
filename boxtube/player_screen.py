@@ -20,7 +20,13 @@ from textual.containers import Center, Horizontal
 from textual.message import Message
 from textual.screen import Screen
 from textual.widgets import Button, Footer, Label, Static
-from textual_image.widget import Image
+from textual_image.widget import (
+    AutoImage,
+    HalfcellImage,
+    SixelImage,
+    TGPImage,
+    UnicodeImage,
+)
 
 from .engine import EngineError, MpvEngine
 from .youtube import Video, human_duration
@@ -34,11 +40,63 @@ def _env_int(name: str, default: int, lo: int, hi: int) -> int:
 
 # Render/capture cadence and frame size. Capture runs independently and the UI
 # renders the latest frame on a steady timer (stale frames are dropped), which
-# smooths the jitter from mpv's variable screenshot latency. Smaller frames cut
-# both the screenshot cost and the terminal render/transmit cost.
+# smooths the jitter from mpv's variable screenshot latency.
 PLAYER_FPS = _env_int("BOXTUBE_PLAYER_FPS", 15, 1, 60)
-PLAYER_HEIGHT = _env_int("BOXTUBE_PLAYER_HEIGHT", 360, 144, 1080)
-DISPLAY_WIDTH = 480
+# Source resolution cap fed to mpv. 480p gives the image backend enough detail to
+# fill a typical terminal stage crisply; downscaling happens at render time.
+PLAYER_HEIGHT = _env_int("BOXTUBE_PLAYER_HEIGHT", 480, 144, 1080)
+# Upper bound on the pixel width we hand the image backend. Frames are otherwise
+# sized to the video widget's on-screen pixel area, so a graphics backend
+# (sixel / kitty) renders as sharply as the cell grid allows without wasting
+# transmit bandwidth. Used until the layout settles, then recomputed.
+MAX_DISPLAY_WIDTH = _env_int("BOXTUBE_PLAYER_MAXWIDTH", 960, 240, 3840)
+DISPLAY_WIDTH_FALLBACK = 640
+
+
+# ----- image backend selection / diagnostics ---------------------------------
+
+# Force a specific backend with BOXTUBE_IMAGE_BACKEND (sixel/kitty/halfcell/…);
+# otherwise textual-image auto-detects the best one the terminal supports.
+_BACKENDS = {
+    "sixel": SixelImage,
+    "tgp": TGPImage,
+    "kitty": TGPImage,
+    "halfcell": HalfcellImage,
+    "half": HalfcellImage,
+    "unicode": UnicodeImage,
+    "ascii": UnicodeImage,
+}
+
+
+def _player_image_class():
+    forced = os.environ.get("BOXTUBE_IMAGE_BACKEND", "").strip().lower()
+    return _BACKENDS.get(forced, AutoImage)
+
+
+# Resolve once at import; the widget class is stable for the session.
+PlayerImage = _player_image_class()
+
+
+def _active_backend() -> str:
+    """Short name of the image backend actually in use (for the title bar)."""
+    forced = os.environ.get("BOXTUBE_IMAGE_BACKEND", "").strip().lower()
+    if forced in _BACKENDS:
+        return forced
+    try:
+        import textual_image.renderable as _r
+
+        return _r.Image.__module__.rsplit(".", 1)[-1]  # sixel / tgp / halfcell / unicode
+    except Exception:
+        return "auto"
+
+
+def _cell_px_width() -> int:
+    try:
+        from textual_image._terminal import get_cell_size
+
+        return get_cell_size().width or 10
+    except Exception:
+        return 10
 
 
 def _black_frame() -> PILImage.Image:
@@ -108,6 +166,10 @@ class PlayerScreen(Screen):
         self.playlist = playlist if playlist else [video]
         self.index = index if 0 <= index < len(self.playlist) else 0
         self.autoplay = autoplay
+        self._backend = _active_backend()
+        # Target frame width in pixels; recomputed from the widget's on-screen
+        # size once the layout settles (see _recompute_target).
+        self._target_w = DISPLAY_WIDTH_FALLBACK
         self.engine: MpvEngine | None = None
         self._stop = False
         self._close_started = False
@@ -124,7 +186,7 @@ class PlayerScreen(Screen):
     def compose(self) -> ComposeResult:
         yield Static(f"[b #ff8a8a]{self.video.title}[/]", id="pl-title", markup=True)
         with Center(id="pl-stage"):
-            yield Image(_black_frame(), id="pl-video")
+            yield PlayerImage(_black_frame(), id="pl-video")
         with Horizontal(id="pl-controls"):
             yield Button("⏮", id="pl-back")
             yield Button("▶", id="pl-pause")
@@ -188,10 +250,28 @@ class PlayerScreen(Screen):
         self._duration = float(self.engine.get("duration") or 0)
         self._set_title()
         self.query_one("#pl-pause", Button).label = "⏸"
+        self._recompute_target()
         # Capture runs on a daemon thread; the UI renders the latest frame on a
         # steady Textual timer so cadence is even and slow frames are dropped.
         threading.Thread(target=self._capture, daemon=True).start()
         self._render_timer = self.set_interval(1.0 / PLAYER_FPS, self._render_tick)
+
+    def on_resize(self, event) -> None:
+        self._recompute_target()
+
+    def _recompute_target(self) -> None:
+        """Size frames to the video widget's on-screen pixel area (UI thread).
+
+        The image backend scales each frame to the widget's cell box, so matching
+        that pixel width is the sharpest the terminal can show without sending
+        more pixels than it can paint.
+        """
+        try:
+            cells = self.query_one("#pl-video", PlayerImage).size.width
+        except Exception:
+            cells = 0
+        if cells:
+            self._target_w = max(160, min(MAX_DISPLAY_WIDTH, cells * _cell_px_width()))
 
     def _capture(self) -> None:
         self._pump_running = True
@@ -220,9 +300,13 @@ class PlayerScreen(Screen):
                     path = self.engine.screenshot()
                     img = PILImage.open(path)
                     img.load()
-                    if img.width > DISPLAY_WIDTH:
-                        h = int(DISPLAY_WIDTH * img.height / img.width)
-                        img = img.resize((DISPLAY_WIDTH, h))
+                    tw = self._target_w
+                    # Only downscale (LANCZOS = sharp); never upscale — that adds
+                    # no detail and only inflates the transmit cost. The backend
+                    # upscales to the cell box if the frame is smaller.
+                    if img.width > tw:
+                        h = max(1, round(tw * img.height / img.width))
+                        img = img.resize((tw, h), PILImage.LANCZOS)
                     self._latest = img  # atomic publish; render timer picks it up
                 except Exception:
                     pass
@@ -236,7 +320,7 @@ class PlayerScreen(Screen):
         if img is not None and img is not self._shown:
             self._shown = img
             try:
-                self.query_one("#pl-video", Image).image = img
+                self.query_one("#pl-video", PlayerImage).image = img
             except Exception:
                 pass
         if self._props:
@@ -265,7 +349,7 @@ class PlayerScreen(Screen):
         pos = ""
         if len(self.playlist) > 1:
             pos = f"  [#6f6f78]· {self.index + 1}/{len(self.playlist)}[/]"
-        suffix = "  [#6f6f78]· loading…[/]" if loading else ""
+        suffix = "  [#6f6f78]· loading…[/]" if loading else f"  [#6f6f78]· {self._backend}[/]"
         try:
             self.query_one("#pl-title", Static).update(
                 f"[b #ff8a8a]{_esc(self.video.title)}[/]{pos}{suffix}"
@@ -317,7 +401,7 @@ class PlayerScreen(Screen):
         self._props = {}
         self._duration = 0.0
         try:
-            self.query_one("#pl-video", Image).image = _black_frame()
+            self.query_one("#pl-video", PlayerImage).image = _black_frame()
             self.query_one("#pl-seek", ClickBar).set_fraction(0.0)
             self.query_one("#pl-time", Label).update("0:00 / 0:00")
             self.query_one("#pl-pause", Button).label = "▶"

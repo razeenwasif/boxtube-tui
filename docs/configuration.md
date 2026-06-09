@@ -14,7 +14,11 @@ knobs that exist are documented here.
 | `BOXTUBE_HWDEC` | mpv `--hwdec` mode, or empty | `auto-safe` | Hardware video decoding mode passed to mpv; empty omits the option |
 | `BOXTUBE_THUMB_CACHE_SIZE` | integer | `64` | Max thumbnails kept in the in-memory LRU cache (`0` disables caching) |
 | `BOXTUBE_PLAYER_FPS` | integer (1–60) | `15` | Player render/capture frame rate |
-| `BOXTUBE_PLAYER_HEIGHT` | integer (144–1080) | `360` | Max video height the player streams/decodes |
+| `BOXTUBE_PLAYER_HEIGHT` | integer (144–1080) | `480` | Max video height the player streams/decodes |
+| `BOXTUBE_PLAYER_MAXWIDTH` | integer (240–3840) | `960` | Upper bound on the pixel width of rendered frames (frames are otherwise sized to the video widget's on-screen pixel area) |
+| `BOXTUBE_IMAGE_BACKEND` | `sixel`, `kitty`/`tgp`, `halfcell`, `unicode`, or empty | auto-detected | Forces the player's image-rendering backend (overrides textual-image's terminal auto-detection) |
+| `BOXTUBE_SCREENSHOT_FORMAT` | `jpg` or `png` | `jpg` | Frame capture format; `png` is lossless (sharper, heavier) |
+| `BOXTUBE_SCREENSHOT_QUALITY` | integer (1–100) | `92` | JPEG quality for captured frames (ignored for `png`) |
 | `XDG_CONFIG_HOME` | Path | `~/.config` | Base dir for the default cookies path |
 
 ### Sign-in / cookies (`BOXTUBE_COOKIES`)
@@ -82,6 +86,33 @@ While paused, the player stops capturing entirely (a paused frame never changes)
 so it idles cheaply. The per-frame render cost is dominated by your terminal's
 image backend (kitty graphics is cheapest; sixel/half-block cost more).
 
+### Video quality (`BOXTUBE_IMAGE_BACKEND`, `BOXTUBE_PLAYER_HEIGHT`, screenshots)
+
+The player samples frames from mpv and hands them to **textual-image**, which
+renders them with the best protocol your terminal supports — **kitty graphics**
+(sharpest), **sixel** (sharp; supported by Windows Terminal ≥ 1.22, foot, xterm),
+or a **half-block** unicode fallback (blocky). The active backend is shown in the
+player's title bar (e.g. `· sixel`).
+
+Frames are sized to the video widget's actual on-screen pixel area, so a graphics
+backend renders as crisply as the cell grid allows. To push quality further:
+
+```bash
+BOXTUBE_IMAGE_BACKEND=sixel boxtube      # force sixel if auto-detect misses it
+BOXTUBE_PLAYER_HEIGHT=720 boxtube        # decode a higher-res source
+BOXTUBE_SCREENSHOT_FORMAT=png boxtube     # lossless frames (no JPEG artifacts)
+BOXTUBE_PLAYER_MAXWIDTH=1280 boxtube     # allow larger frames on big windows
+```
+
+Notes:
+
+- On a **half-block** terminal, resolution is capped by the cell grid (2 pixels
+  tall per cell), so raising the source height or max width won't help much —
+  switching to a sixel/kitty terminal is the real upgrade.
+- **Audio** is already fetched at YouTube's best available bitrate (`bestaudio`,
+  typically ~130 kbps opus); there is no higher tier without a Premium-
+  authenticated session, so there's no audio-quality knob.
+
 ### Video output (`BOXTUBE_VO`)
 
 Playback renders video into the terminal using an mpv *video output* (`--vo`).
@@ -118,8 +149,8 @@ are the natural first place to customize.
 | Setting | Location | Default | Notes |
 |---------|----------|---------|-------|
 | Search result limit | `boxtube/app.py` (`search(query, limit=25)`) | 25 | Max results per search |
-| Playback resolution cap | `BOXTUBE_PLAYER_HEIGHT` (engine `--ytdl-format`) | ≤360p | Lower res starts faster; tune for your terminal |
-| Player display width | `boxtube/player_screen.py` (`DISPLAY_WIDTH`) | 480px | Frames resized before render to bound work |
+| Playback resolution cap | `BOXTUBE_PLAYER_HEIGHT` (engine `--ytdl-format`) | ≤480p | Lower res starts faster; tune for your terminal |
+| Player display width | `boxtube/player_screen.py` (`MAX_DISPLAY_WIDTH`) | ≤960px | Frames sized to the widget's pixel area, bounded by this |
 | Thumbnail source | `boxtube/youtube.py` (`Video.thumbnail_url`) | `i.ytimg.com/.../mqdefault.jpg` | Clean 320×180 16:9 frame |
 | Description truncation | `boxtube/app.py` (`_show_details`) | 1500 chars | Keeps the preview pane tidy |
 | Accent color | `boxtube/boxtube.tcss` (`#ff6b6b`) | light red | Theme accent |

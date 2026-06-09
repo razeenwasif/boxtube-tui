@@ -61,6 +61,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Makefile` with common developer tasks and a `tests/` suite.
 
 ### Changed
+- **Sharper in-terminal video.** Frames are now sized to the video widget's actual
+  on-screen pixel area (so sixel/kitty terminals render as crisply as the cell grid
+  allows) instead of a fixed 480px, downscaled with a high-quality LANCZOS filter.
+  The source cap rose from 360p to **480p** and capture JPEG quality from 80 to
+  **92**. The active image backend is shown in the player title bar. New knobs:
+  `BOXTUBE_IMAGE_BACKEND` (force sixel/kitty/halfcell/…), `BOXTUBE_PLAYER_MAXWIDTH`,
+  `BOXTUBE_SCREENSHOT_FORMAT` (`jpg`/`png`), `BOXTUBE_SCREENSHOT_QUALITY`.
 - The main **grid** and **preview** panel borders are now the light-red accent
   (`#ff6b6b`) instead of grey, for a stronger framed look.
 - `youtube.search()` and `player.play()` now accept an optional `cookies`
