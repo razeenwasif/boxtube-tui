@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Loading skeletons**: while a feed loads, the grid now fills with gently
+  pulsing placeholder cards instead of going blank under a "Loading…" title —
+  clearer feedback and a steadier layout as results arrive.
 - **Duration badges on thumbnails**: every video thumbnail (grid cards and the
   preview pane) now carries a YouTube-style duration pill in the bottom-right
   corner, baked into the image so it shows on every terminal backend. The card

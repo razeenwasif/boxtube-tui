@@ -38,7 +38,7 @@ and a preview pane.
 
 | Module | Responsibility |
 |--------|----------------|
-| `app.py` | Textual UI + controller. Header/chips/sidebar/grid/preview. `BoxTube(App)`, card widgets (`VideoCard`/`PlaylistCard`/`Card`), `NavItem`/`ChannelItem`/`Chip`, `CardSelected`/`CardActivated` messages. |
+| `app.py` | Textual UI + controller. Header/chips/sidebar/grid/preview. `BoxTube(App)`, card widgets (`VideoCard`/`PlaylistCard`/`SkeletonCard`/`Card`), `NavItem`/`ChannelItem`/`Chip`, `CardSelected`/`CardActivated` messages. Loads go through `_begin_load` (title + `_show_skeletons` + pulse timer); `_show_grid`/`_on_load_error` stop the pulse. |
 | `youtube.py` | yt-dlp search + feeds. `Video`/`Playlist`/`Channel`, `search`, `videos_for_feed`, `shorts_feed` (#shorts hashtag), `user_playlists`/`playlist_videos`, `subscribed_channels`/`channel_videos`, `find_ytdlp`/`find_js_runtime`. One internal runner `_entries`. |
 | `account.py` | Sign-in state from a cookies file. `is_signed_in`, `cookies_arg`, `cookies_path`. |
 | `thumbnails.py` | Thumbnail download + **LRU cache**; `placeholder`, `for_card` (downscale for grid cells), `with_duration_badge` (bakes a YouTube-style duration pill into the image, all backends). |

@@ -212,6 +212,34 @@ ListView#subs:focus > ChannelItem.-highlight {
     padding: 0 1;
 }
 
+/* ----- skeleton placeholders (while a feed loads) ------------------ */
+
+.card-skel {
+    height: auto;
+    padding: 0 0 1 0;
+    border: round #181818;
+}
+
+.skel-thumb {
+    width: 1fr;
+    height: 8;
+    background: #1d1d1d;
+}
+
+.skel-line {
+    height: 1;
+    margin: 1 1 0 1;
+    background: #1d1d1d;
+}
+
+.skel-line-2 {
+    width: 55%;
+}
+
+.skel-thumb.-dim, .skel-line.-dim {
+    background: #282828;
+}
+
 /* ----- detail pane contents --------------------------------------- */
 
 #thumb {

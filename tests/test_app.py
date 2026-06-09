@@ -151,6 +151,25 @@ def test_populate_videos(sample_videos):
     run(go())
 
 
+def test_skeletons_show_then_clear(sample_videos):
+    from boxtube.app import SkeletonCard
+
+    async def go():
+        app = BoxTube()
+        async with app.run_test() as pilot:
+            app._show_skeletons(count=6)
+            await pilot.pause()
+            assert len(app.query(SkeletonCard)) == 6
+            assert app._skel_timer is not None
+            # Real results replace the skeletons and stop the pulse timer.
+            app._populate_videos(sample_videos, "Home")
+            await pilot.pause()
+            assert len(app.query(SkeletonCard)) == 0
+            assert app._skel_timer is None
+
+    run(go())
+
+
 def test_navigation_updates_current(sample_videos):
     async def go():
         app = BoxTube()

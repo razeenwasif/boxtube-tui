@@ -127,6 +127,18 @@ class PlaylistCard(Card):
         yield Label(p.count_str, classes="card-meta")
 
 
+class SkeletonCard(Vertical):
+    """A non-interactive placeholder shown in the grid while a feed loads."""
+
+    def __init__(self) -> None:
+        super().__init__(classes="card-skel")
+
+    def compose(self) -> ComposeResult:
+        yield Static("", classes="skel-thumb")
+        yield Static("", classes="skel-line skel-line-1")
+        yield Static("", classes="skel-line skel-line-2")
+
+
 class NavItem(ListItem):
     """A row in the left sidebar nav."""
 
@@ -207,6 +219,8 @@ class BoxTube(App[None]):
         self._focused_item = None
         self._thumbs_loaded: set[str] = set()
         self._thumb_timer = None
+        self._skel_timer = None
+        self._skel_pulse_on = False
 
     # ----- layout --------------------------------------------------------
 
@@ -370,7 +384,7 @@ class BoxTube(App[None]):
         if cookies is None:
             self.call_from_thread(self._require_sign_in)
             return
-        self.call_from_thread(self._set_results_title, "Loading…")
+        self.call_from_thread(self._begin_load, "Loading…")
         try:
             if key == "playlists":
                 playlists = youtube.user_playlists(cookies=cookies)
@@ -388,7 +402,7 @@ class BoxTube(App[None]):
     @work(thread=True, exclusive=True, group="source")
     def load_playlist(self, playlist: Playlist) -> None:
         cookies = account.cookies_arg()
-        self.call_from_thread(self._set_results_title, f"Loading {playlist.title}…")
+        self.call_from_thread(self._begin_load, f"Loading {playlist.title}…")
         try:
             videos = youtube.playlist_videos(playlist.id, cookies=cookies)
         except SearchError as exc:
@@ -402,7 +416,7 @@ class BoxTube(App[None]):
     @work(thread=True, exclusive=True, group="source")
     def load_channel(self, channel: Channel) -> None:
         cookies = account.cookies_arg()
-        self.call_from_thread(self._set_results_title, f"Loading {channel.name}…")
+        self.call_from_thread(self._begin_load, f"Loading {channel.name}…")
         try:
             videos = youtube.channel_videos(channel.id, cookies=cookies)
         except SearchError as exc:
@@ -427,7 +441,7 @@ class BoxTube(App[None]):
     @work(thread=True, exclusive=True, group="source")
     def run_shorts(self) -> None:
         cookies = account.cookies_arg()
-        self.call_from_thread(self._set_results_title, "Loading Shorts…")
+        self.call_from_thread(self._begin_load, "Loading Shorts…")
         try:
             videos = youtube.shorts_feed(limit=40, cookies=cookies)
         except SearchError as exc:
@@ -441,7 +455,7 @@ class BoxTube(App[None]):
     @work(thread=True, exclusive=True, group="source")
     def run_search(self, query: str) -> None:
         cookies = account.cookies_arg()
-        self.call_from_thread(self._set_results_title, "Searching…")
+        self.call_from_thread(self._begin_load, "Searching…")
         try:
             videos = youtube.search(query, limit=25, cookies=cookies)
         except SearchError as exc:
@@ -533,6 +547,38 @@ class BoxTube(App[None]):
         width = self.query_one("#grid").content_size.width or 70
         return max(1, (width + GRID_GUTTER) // (CARD_WIDTH + GRID_GUTTER))
 
+    def _show_skeletons(self, count: int = 12) -> None:
+        """Fill the grid with placeholder cards while a feed loads (UI thread)."""
+        self._stop_skeleton_pulse()
+        grid = self.query_one("#grid-inner", Grid)
+        grid.remove_children()
+        self._cards = []
+        self._focused_item = None
+        self._cols = self._compute_cols()
+        grid.styles.grid_size_columns = self._cols
+        grid.mount(*[SkeletonCard() for _ in range(count)])
+        self._skel_pulse_on = False
+        self._skel_timer = self.set_interval(0.6, self._pulse_skeletons)
+
+    def _pulse_skeletons(self) -> None:
+        """Gently alternate skeleton shade so loading feels alive (cheap)."""
+        self._skel_pulse_on = not self._skel_pulse_on
+        for block in self.query(".skel-thumb, .skel-line"):
+            block.set_class(self._skel_pulse_on, "-dim")
+
+    def _stop_skeleton_pulse(self) -> None:
+        if self._skel_timer is not None:
+            try:
+                self._skel_timer.stop()
+            except Exception:
+                pass
+            self._skel_timer = None
+
+    def _begin_load(self, title: str) -> None:
+        """Set the grid title and show skeleton placeholders (UI thread)."""
+        self._set_results_title(title)
+        self._show_skeletons()
+
     def _populate_videos(self, videos: list[Video], title: str) -> None:
         self._show_grid([VideoCard(v) for v in videos], title, video_feed=True)
 
@@ -546,6 +592,7 @@ class BoxTube(App[None]):
             subs.append(ChannelItem(channel))
 
     def _show_grid(self, cards: list[Card], title: str, video_feed: bool) -> None:
+        self._stop_skeleton_pulse()
         grid = self.query_one("#grid-inner", Grid)
         grid.remove_children()
         self._cards = cards
@@ -574,6 +621,7 @@ class BoxTube(App[None]):
         self.query_one("#grid").border_title = title
 
     def _on_load_error(self, message: str) -> None:
+        self._stop_skeleton_pulse()
         self.query_one("#grid-inner", Grid).remove_children()
         self._cards = []
         self._update_auth()
