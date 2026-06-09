@@ -173,6 +173,11 @@ ListView#subs:focus > ChannelItem.-highlight {
     border: round #181818;
 }
 
+.card:hover {
+    border: round #2a2a2a;
+    background: #1a1a1a;
+}
+
 .card:focus, .card.-sel {
     border: round #ff6b6b;
     background: #202020;

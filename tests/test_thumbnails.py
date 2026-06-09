@@ -57,6 +57,22 @@ def test_fetch_uses_lru_cache(monkeypatch):
     thumbnails.clear_cache()
 
 
+def test_duration_badge_paints_without_mutating_source():
+    src = PILImage.new("RGB", (240, 135), (20, 20, 20))
+    out = thumbnails.with_duration_badge(src, "12:34")
+    assert out.size == src.size
+    assert out is not src
+    # Source is untouched (cache safety); badge changed some bottom-right pixels.
+    assert src.getpixel((230, 128)) == (20, 20, 20)
+    assert out.getpixel((230, 128)) != (20, 20, 20)
+
+
+def test_duration_badge_noop_for_unknown():
+    src = PILImage.new("RGB", (240, 135), (20, 20, 20))
+    assert thumbnails.with_duration_badge(src, "—") is src
+    assert thumbnails.with_duration_badge(src, "") is src
+
+
 def test_cache_can_be_disabled(monkeypatch):
     thumbnails.clear_cache()
     monkeypatch.setenv("BOXTUBE_THUMB_CACHE_SIZE", "0")

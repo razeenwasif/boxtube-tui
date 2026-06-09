@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Duration badges on thumbnails**: every video thumbnail (grid cards and the
+  preview pane) now carries a YouTube-style duration pill in the bottom-right
+  corner, baked into the image so it shows on every terminal backend. The card
+  meta line drops to channel · views, and cards gain a hover highlight.
 - **Playlist-aware player / autoplay**: the player now carries the whole feed you
   opened from. Press **`n`** / **`b`** to move to the next/previous video in place.
   Opening from the **Shorts** feed enables **autoplay** — when a Short ends it

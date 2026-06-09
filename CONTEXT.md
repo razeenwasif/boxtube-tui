@@ -41,7 +41,7 @@ and a preview pane.
 | `app.py` | Textual UI + controller. Header/chips/sidebar/grid/preview. `BoxTube(App)`, card widgets (`VideoCard`/`PlaylistCard`/`Card`), `NavItem`/`ChannelItem`/`Chip`, `CardSelected`/`CardActivated` messages. |
 | `youtube.py` | yt-dlp search + feeds. `Video`/`Playlist`/`Channel`, `search`, `videos_for_feed`, `shorts_feed` (#shorts hashtag), `user_playlists`/`playlist_videos`, `subscribed_channels`/`channel_videos`, `find_ytdlp`/`find_js_runtime`. One internal runner `_entries`. |
 | `account.py` | Sign-in state from a cookies file. `is_signed_in`, `cookies_arg`, `cookies_path`. |
-| `thumbnails.py` | Thumbnail download + **LRU cache**; `placeholder`, `for_card` (downscale for grid cells). |
+| `thumbnails.py` | Thumbnail download + **LRU cache**; `placeholder`, `for_card` (downscale for grid cells), `with_duration_badge` (bakes a YouTube-style duration pill into the image, all backends). |
 | `engine.py` | **Headless mpv** A/V engine over JSON IPC. `MpvEngine` (`start`, `get`/`set`, `seek`, `screenshot`, `quit`). |
 | `player_screen.py` | Custom player UI (`PlayerScreen`, `ClickBar`). Frame pump + mouse control bar. Carries a `playlist`/`index`; `_switch_to` plays the next clip in place; `autoplay` (Shorts) advances on EOF; `n`/`b` = next/prev. Frames sized to the widget's pixel area (`_recompute_target`, LANCZOS); image backend via `PlayerImage`/`BOXTUBE_IMAGE_BACKEND`, shown in the title. |
 | `player.py` | mpv `--vo`/`--hwdec` detection (`detect_vo`, `detect_hwdec`, `mpv_path`). `build_command`/`play` are legacy (unused by the app now; still tested). |

@@ -105,10 +105,9 @@ class VideoCard(Card):
         v = self.video
         yield Image(thumbnails.placeholder(), classes="card-thumb")
         yield Label(v.title, classes="card-title")
-        yield Label(
-            f"{v.channel} · {v.views_str} views · {v.duration_str}",
-            classes="card-meta",
-        )
+        # Duration now rides as a badge on the thumbnail (YouTube-style), so the
+        # meta line is just channel · views.
+        yield Label(f"{v.channel} · {v.views_str} views", classes="card-meta")
 
     def set_thumb(self, image) -> None:
         self.query_one(".card-thumb", Image).image = image
@@ -501,8 +500,12 @@ class BoxTube(App[None]):
                     self._thumbs_loaded.add(video.id)  # don't retry a hard failure
                     continue
                 self._thumbs_loaded.add(video.id)
-                # Pre-resize off the UI thread so each card re-render is cheaper.
-                self.call_from_thread(self._apply_card_thumb, card, thumbnails.for_card(image))
+                # Pre-resize + bake the duration badge off the UI thread so each
+                # card re-render is cheaper.
+                thumb = thumbnails.with_duration_badge(
+                    thumbnails.for_card(image), video.duration_str
+                )
+                self.call_from_thread(self._apply_card_thumb, card, thumb)
 
     def _apply_card_thumb(self, card: VideoCard, image) -> None:
         try:
@@ -648,6 +651,7 @@ class BoxTube(App[None]):
             image = thumbnails.fetch(video.id, video.thumbnail_url)
         except Exception:
             return  # leave the placeholder in place
+        image = thumbnails.with_duration_badge(image, video.duration_str)
         self.call_from_thread(self._apply_thumbnail, video.id, image)
 
     def _apply_thumbnail(self, video_id: str, image) -> None:
