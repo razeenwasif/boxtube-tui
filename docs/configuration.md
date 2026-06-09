@@ -23,6 +23,7 @@ player_fps = 15
 image_backend = "auto"
 screenshot_format = "jpg"
 audio_buffer = "0.6"
+audio_delay = "0.0"
 thumb_cache = 64
 grid_density = "normal"
 playback_cookies = false
@@ -45,6 +46,7 @@ playback_cookies = false
 | `BOXTUBE_SCREENSHOT_FORMAT` | `jpg` or `png` | `jpg` | Frame capture format; `png` is lossless (sharper, heavier) |
 | `BOXTUBE_SCREENSHOT_QUALITY` | integer (1–100) | `92` | JPEG quality for captured frames (ignored for `png`) |
 | `BOXTUBE_AUDIO_BUFFER` | seconds (0.1–5.0) | `0.6` | mpv audio output buffer; larger absorbs CPU spikes that cause crackle/dropouts, at a little seek latency |
+| `BOXTUBE_AUDIO_DELAY` | seconds (−2.0–2.0) | `0.0` | Holds audio back to line up with the slightly-late sampled video; raise (e.g. 0.2) if audio runs ahead of the picture |
 | `XDG_CONFIG_HOME` | Path | `~/.config` | Base dir for the default cookies path |
 
 ### Sign-in / cookies (`BOXTUBE_COOKIES`)
@@ -164,6 +166,23 @@ If you still hear crackle, raise the buffer (also in the Settings screen):
 BOXTUBE_AUDIO_BUFFER=1.5 boxtube     # more headroom; slightly slower seek/pause
 BOXTUBE_PLAYER_FPS=10 boxtube        # fewer screenshots → less CPU pressure
 ```
+
+### Audio/video sync (`BOXTUBE_AUDIO_DELAY`)
+
+BoxTube doesn't play video through mpv — it samples the current frame and draws
+it in the terminal. That sampling + image encode + transmit means the picture
+shows a beat after the matching audio, so audio can feel slightly *ahead* of the
+video. A small positive **audio delay** holds the audio back to line up (also in
+the Settings screen). It's terminal-dependent, so dial it to taste:
+
+```bash
+BOXTUBE_AUDIO_DELAY=0.2 boxtube      # try 0.1–0.3; raise if audio still leads
+```
+
+Note: capture frame rate also affects sync — higher `BOXTUBE_PLAYER_FPS` shows
+fresher frames (less video lag) but costs more CPU. Since YouTube video is only
+~24–30 fps, going above ~24 just duplicates frames and risks audio crackle; it
+will **not** give you 60 fps playback.
 
 ### Video output (`BOXTUBE_VO`)
 

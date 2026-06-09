@@ -53,6 +53,19 @@ def _audio_buffer() -> float:
         return 0.6
 
 
+def _audio_delay() -> float:
+    """Seconds to delay audio so it lines up with the sampled video frames.
+
+    BoxTube shows frames a beat after capture (screenshot + image encode +
+    terminal transmit), so audio can run slightly ahead of the picture. A small
+    positive delay holds the audio back to match. Tunable via BOXTUBE_AUDIO_DELAY.
+    """
+    try:
+        return max(-2.0, min(2.0, float(os.environ.get("BOXTUBE_AUDIO_DELAY", "0.0"))))
+    except ValueError:
+        return 0.0
+
+
 class MpvEngine:
     def __init__(self, url: str, *, cookies: str | None = None, max_height: int = 480) -> None:
         self.url = url
@@ -93,6 +106,7 @@ class MpvEngine:
             # output buffer plus generous demuxer read-ahead so the audio thread
             # has runway when the UI/screenshot work steals the CPU.
             f"--audio-buffer={_audio_buffer()}",
+            f"--audio-delay={_audio_delay()}",
             "--cache=yes",
             "--demuxer-readahead-secs=20",
             f"--ytdl-format={fmt}",

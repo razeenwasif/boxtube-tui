@@ -106,6 +106,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   are pre-resized off the UI thread for cheaper re-renders, and the scan trigger
   is debounced so rapid scrolling doesn't restart the loader on every event.
 
+### Added
+- **Audio/video sync offset** (`BOXTUBE_AUDIO_DELAY`, also in Settings): a small
+  positive delay holds audio back to line up with the sampled video, which shows
+  a beat late due to image encode/transmit. Default 0; try ~0.2 if audio leads.
+
 ### Fixed
 - **Audio crackle / dropouts** during playback. mpv's audio thread could be
   briefly starved when terminal-image encoding and per-frame screenshots spiked
