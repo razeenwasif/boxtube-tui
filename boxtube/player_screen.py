@@ -42,15 +42,17 @@ def _env_int(name: str, default: int, lo: int, hi: int) -> int:
 # renders the latest frame on a steady timer (stale frames are dropped), which
 # smooths the jitter from mpv's variable screenshot latency.
 PLAYER_FPS = _env_int("BOXTUBE_PLAYER_FPS", 15, 1, 60)
-# Source resolution cap fed to mpv. 480p gives the image backend enough detail to
-# fill a typical terminal stage crisply; downscaling happens at render time.
-PLAYER_HEIGHT = _env_int("BOXTUBE_PLAYER_HEIGHT", 480, 144, 1080)
-# Upper bound on the pixel width we hand the image backend. Frames are otherwise
-# sized to the video widget's on-screen pixel area, so a graphics backend
-# (sixel / kitty) renders as sharply as the cell grid allows without wasting
-# transmit bandwidth. Used until the layout settles, then recomputed.
-MAX_DISPLAY_WIDTH = _env_int("BOXTUBE_PLAYER_MAXWIDTH", 960, 240, 3840)
-DISPLAY_WIDTH_FALLBACK = 640
+# Source resolution cap fed to mpv. Kept at 360p by default: mpv takes an
+# on-demand screenshot every frame *inside its playback loop*, so a higher source
+# makes each screenshot heavier and can stall audio — most painful on sixel
+# terminals under WSL. Raise it on a fast graphics terminal (kitty/Ghostty).
+PLAYER_HEIGHT = _env_int("BOXTUBE_PLAYER_HEIGHT", 360, 144, 1080)
+# Upper bound on the pixel width we hand the image backend. Frames are sized to
+# the video widget's on-screen pixel area, capped here. Sixel encode/transmit
+# cost grows with pixel count, so the default stays modest; raise it (or the
+# source height) on a cheap-transmit graphics terminal for sharper video.
+MAX_DISPLAY_WIDTH = _env_int("BOXTUBE_PLAYER_MAXWIDTH", 480, 240, 3840)
+DISPLAY_WIDTH_FALLBACK = 480
 
 
 # ----- image backend selection / diagnostics ---------------------------------

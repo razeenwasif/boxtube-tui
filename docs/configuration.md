@@ -14,8 +14,8 @@ knobs that exist are documented here.
 | `BOXTUBE_HWDEC` | mpv `--hwdec` mode, or empty | `auto-safe` | Hardware video decoding mode passed to mpv; empty omits the option |
 | `BOXTUBE_THUMB_CACHE_SIZE` | integer | `64` | Max thumbnails kept in the in-memory LRU cache (`0` disables caching) |
 | `BOXTUBE_PLAYER_FPS` | integer (1–60) | `15` | Player render/capture frame rate |
-| `BOXTUBE_PLAYER_HEIGHT` | integer (144–1080) | `480` | Max video height the player streams/decodes |
-| `BOXTUBE_PLAYER_MAXWIDTH` | integer (240–3840) | `960` | Upper bound on the pixel width of rendered frames (frames are otherwise sized to the video widget's on-screen pixel area) |
+| `BOXTUBE_PLAYER_HEIGHT` | integer (144–1080) | `360` | Max video height the player streams/decodes |
+| `BOXTUBE_PLAYER_MAXWIDTH` | integer (240–3840) | `480` | Upper bound on the pixel width of rendered frames (frames are otherwise sized to the video widget's on-screen pixel area) |
 | `BOXTUBE_IMAGE_BACKEND` | `sixel`, `kitty`/`tgp`, `halfcell`, `unicode`, or empty | auto-detected | Forces the player's image-rendering backend (overrides textual-image's terminal auto-detection) |
 | `BOXTUBE_SCREENSHOT_FORMAT` | `jpg` or `png` | `jpg` | Frame capture format; `png` is lossless (sharper, heavier) |
 | `BOXTUBE_SCREENSHOT_QUALITY` | integer (1–100) | `92` | JPEG quality for captured frames (ignored for `png`) |
@@ -90,19 +90,30 @@ image backend (kitty graphics is cheapest; sixel/half-block cost more).
 
 The player samples frames from mpv and hands them to **textual-image**, which
 renders them with the best protocol your terminal supports — **kitty graphics**
-(sharpest), **sixel** (sharp; supported by Windows Terminal ≥ 1.22, foot, xterm),
-or a **half-block** unicode fallback (blocky). The active backend is shown in the
-player's title bar (e.g. `· sixel`).
+(sharpest, cheapest to transmit), **sixel** (sharp but CPU-heavy to encode;
+supported by Windows Terminal ≥ 1.22, foot, xterm), or a **half-block** unicode
+fallback (blocky). The active backend is shown in the player's title bar (e.g.
+`· sixel`).
 
-Frames are sized to the video widget's actual on-screen pixel area, so a graphics
-backend renders as crisply as the cell grid allows. To push quality further:
+**The defaults favour smooth playback, not maximum sharpness.** mpv takes an
+on-demand screenshot *inside its playback loop* every frame, so a higher source
+resolution makes each screenshot heavier and can stutter audio; and sixel
+encoding (on the UI thread, every render tick) gets expensive with larger frames.
+Both are most painful on **sixel under WSL**, so the defaults stay at 360p / 480px
+wide. Frames are sized to the video widget's on-screen pixel area, capped by
+`BOXTUBE_PLAYER_MAXWIDTH`.
+
+To trade smoothness for sharpness — **recommended only on a kitty-graphics
+terminal** (kitty / Ghostty / WezTerm), where transmit is cheap:
 
 ```bash
-BOXTUBE_IMAGE_BACKEND=sixel boxtube      # force sixel if auto-detect misses it
 BOXTUBE_PLAYER_HEIGHT=720 boxtube        # decode a higher-res source
-BOXTUBE_SCREENSHOT_FORMAT=png boxtube     # lossless frames (no JPEG artifacts)
 BOXTUBE_PLAYER_MAXWIDTH=1280 boxtube     # allow larger frames on big windows
+BOXTUBE_SCREENSHOT_FORMAT=png boxtube     # lossless frames (no JPEG artifacts)
+BOXTUBE_IMAGE_BACKEND=sixel boxtube      # force sixel if auto-detect misses it
 ```
+
+If video stutters or audio drops, **lower** these (or `BOXTUBE_PLAYER_FPS`).
 
 Notes:
 
@@ -149,8 +160,8 @@ are the natural first place to customize.
 | Setting | Location | Default | Notes |
 |---------|----------|---------|-------|
 | Search result limit | `boxtube/app.py` (`search(query, limit=25)`) | 25 | Max results per search |
-| Playback resolution cap | `BOXTUBE_PLAYER_HEIGHT` (engine `--ytdl-format`) | ≤480p | Lower res starts faster; tune for your terminal |
-| Player display width | `boxtube/player_screen.py` (`MAX_DISPLAY_WIDTH`) | ≤960px | Frames sized to the widget's pixel area, bounded by this |
+| Playback resolution cap | `BOXTUBE_PLAYER_HEIGHT` (engine `--ytdl-format`) | ≤360p | Lower res starts faster + keeps audio smooth; raise on a fast terminal |
+| Player display width | `boxtube/player_screen.py` (`MAX_DISPLAY_WIDTH`) | ≤480px | Frames sized to the widget's pixel area, bounded by this |
 | Thumbnail source | `boxtube/youtube.py` (`Video.thumbnail_url`) | `i.ytimg.com/.../mqdefault.jpg` | Clean 320×180 16:9 frame |
 | Description truncation | `boxtube/app.py` (`_show_details`) | 1500 chars | Keeps the preview pane tidy |
 | Accent color | `boxtube/boxtube.tcss` (`#ff6b6b`) | light red | Theme accent |
