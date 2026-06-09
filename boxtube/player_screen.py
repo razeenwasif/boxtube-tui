@@ -21,12 +21,12 @@ from textual.message import Message
 from textual.screen import Screen
 from textual.widgets import Button, Footer, Label, Static
 from textual_image.widget import (
-    AutoImage,
     HalfcellImage,
     SixelImage,
     TGPImage,
     UnicodeImage,
 )
+from textual_image.widget import Image as AutoResolvedImage
 
 from .engine import EngineError, MpvEngine
 from .youtube import Video, human_duration
@@ -70,7 +70,11 @@ _BACKENDS = {
 
 def _player_image_class():
     forced = os.environ.get("BOXTUBE_IMAGE_BACKEND", "").strip().lower()
-    return _BACKENDS.get(forced, AutoImage)
+    # Default to textual-image's already-resolved widget. Crucially this is the
+    # dedicated SixelImage on a sixel terminal — the generic AutoImage does NOT
+    # paint sixel (the library special-cases it for exactly this reason), so
+    # using AutoImage here renders a black screen.
+    return _BACKENDS.get(forced, AutoResolvedImage)
 
 
 # Resolve once at import; the widget class is stable for the session.
