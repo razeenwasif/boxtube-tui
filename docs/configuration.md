@@ -22,6 +22,7 @@ player_maxwidth = 480
 player_fps = 15
 image_backend = "auto"
 screenshot_format = "jpg"
+audio_buffer = "0.6"
 thumb_cache = 64
 grid_density = "normal"
 playback_cookies = false
@@ -43,6 +44,7 @@ playback_cookies = false
 | `BOXTUBE_IMAGE_BACKEND` | `sixel`, `kitty`/`tgp`, `halfcell`, `unicode`, or empty | auto-detected | Forces the player's image-rendering backend (overrides textual-image's terminal auto-detection) |
 | `BOXTUBE_SCREENSHOT_FORMAT` | `jpg` or `png` | `jpg` | Frame capture format; `png` is lossless (sharper, heavier) |
 | `BOXTUBE_SCREENSHOT_QUALITY` | integer (1–100) | `92` | JPEG quality for captured frames (ignored for `png`) |
+| `BOXTUBE_AUDIO_BUFFER` | seconds (0.1–5.0) | `0.6` | mpv audio output buffer; larger absorbs CPU spikes that cause crackle/dropouts, at a little seek latency |
 | `XDG_CONFIG_HOME` | Path | `~/.config` | Base dir for the default cookies path |
 
 ### Sign-in / cookies (`BOXTUBE_COOKIES`)
@@ -146,7 +148,22 @@ Notes:
   switching to a sixel/kitty terminal is the real upgrade.
 - **Audio** is already fetched at YouTube's best available bitrate (`bestaudio`,
   typically ~130 kbps opus); there is no higher tier without a Premium-
-  authenticated session, so there's no audio-quality knob.
+  authenticated session, so there's no audio-*bitrate* knob.
+
+### Audio crackle / dropouts (`BOXTUBE_AUDIO_BUFFER`)
+
+The player decodes audio in mpv while the terminal-image encoding (sixel/kitty)
+and per-frame screenshots spike CPU. On a constrained machine those spikes can
+briefly starve mpv's audio thread, heard as crackle or dropouts. BoxTube runs mpv
+with a larger audio output buffer (0.6 s by default, vs mpv's 0.2 s), cheaper
+8-bit screenshots, and generous demuxer read-ahead to ride through them.
+
+If you still hear crackle, raise the buffer (also in the Settings screen):
+
+```bash
+BOXTUBE_AUDIO_BUFFER=1.5 boxtube     # more headroom; slightly slower seek/pause
+BOXTUBE_PLAYER_FPS=10 boxtube        # fewer screenshots → less CPU pressure
+```
 
 ### Video output (`BOXTUBE_VO`)
 

@@ -294,15 +294,21 @@ class PlayerScreen(Screen):
 
     def _capture_loop(self) -> None:
         period = 1.0 / self._fps
+        tick = 0
+        vol = None
         while not self._stop and self.engine and self.engine.is_alive():
             t0 = time.time()
             paused = False
             try:
                 paused = bool(self.engine.get("pause"))
+                # Volume only changes via our own controls; poll it rarely to cut
+                # IPC round-trips that contend with screenshots on mpv's thread.
+                if tick % 12 == 0:
+                    vol = self.engine.get("volume")
                 self._props = {
                     "time-pos": self.engine.get("time-pos") or 0.0,
                     "pause": paused,
-                    "volume": self.engine.get("volume"),
+                    "volume": vol,
                 }
             except Exception:
                 pass
@@ -322,6 +328,7 @@ class PlayerScreen(Screen):
                     self._latest = img  # atomic publish; render timer picks it up
                 except Exception:
                     pass
+            tick += 1
             time.sleep(max(0.0, period - (time.time() - t0)))
         if not self._stop:
             self._safe_call(self._on_playback_ended)  # reached EOF

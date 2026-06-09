@@ -107,6 +107,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   is debounced so rapid scrolling doesn't restart the loader on every event.
 
 ### Fixed
+- **Audio crackle / dropouts** during playback. mpv's audio thread could be
+  briefly starved when terminal-image encoding and per-frame screenshots spiked
+  CPU. mpv now runs with a larger audio output buffer (`BOXTUBE_AUDIO_BUFFER`,
+  default 0.6 s, also in Settings), cheaper 8-bit screenshots, and generous
+  demuxer read-ahead; the frame pump also polls volume far less often to reduce
+  IPC contention on mpv's thread.
 - Playback no longer silently fails when signed in. Sending cookies to mpv broke
   extraction (the JS-free `android_vr`/`tv` clients don't support authenticated
   requests, forcing the JS-dependent `web` client). Cookies are no longer sent to

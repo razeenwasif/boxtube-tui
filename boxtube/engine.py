@@ -39,6 +39,20 @@ def _screenshot_quality() -> int:
         return 92
 
 
+def _audio_buffer() -> float:
+    """Seconds of audio mpv buffers ahead at the output.
+
+    The default mpv buffer (0.2s) underruns when the terminal-image encoding and
+    per-frame screenshots spike CPU and briefly starve the audio thread, which is
+    heard as crackle/dropouts. A larger buffer rides through those spikes at the
+    cost of a little extra seek/pause latency. Tunable via BOXTUBE_AUDIO_BUFFER.
+    """
+    try:
+        return max(0.1, min(5.0, float(os.environ.get("BOXTUBE_AUDIO_BUFFER", "0.6"))))
+    except ValueError:
+        return 0.6
+
+
 class MpvEngine:
     def __init__(self, url: str, *, cookies: str | None = None, max_height: int = 480) -> None:
         self.url = url
@@ -73,6 +87,14 @@ class MpvEngine:
             f"--input-ipc-server={self._sock_path}",
             f"--screenshot-format={_screenshot_format()}",
             f"--screenshot-jpeg-quality={_screenshot_quality()}",
+            # Cheaper screenshots (8-bit) → less time stalling mpv's core thread.
+            "--screenshot-high-bit-depth=no",
+            # Audio resilience against CPU spikes from image encoding: a larger
+            # output buffer plus generous demuxer read-ahead so the audio thread
+            # has runway when the UI/screenshot work steals the CPU.
+            f"--audio-buffer={_audio_buffer()}",
+            "--cache=yes",
+            "--demuxer-readahead-secs=20",
             f"--ytdl-format={fmt}",
             "--ytdl-raw-options-append=extractor-args=youtube:player_client=default,android_vr,tv",
         ]
