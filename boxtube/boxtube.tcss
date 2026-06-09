@@ -151,6 +151,11 @@ ListView#subs:focus > ChannelItem.-highlight {
     width: 1fr;
 }
 
+/* Shorts are vertical: narrower cards, tighter gutter. */
+#grid-inner.-shorts {
+    grid-gutter: 1 1;
+}
+
 /* right preview */
 #detail-pane {
     width: 2fr;

@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Vertical Shorts view**: the Shorts feed now renders as tall 9:16 cards using
+  YouTube's vertical thumbnail, in a tighter grid of narrower columns, so it reads
+  as Shorts rather than wide video cards. Cached thumbnails are bounded to 640px
+  on the long edge to keep memory/render cost in check.
 - **Loading skeletons**: while a feed loads, the grid now fills with gently
   pulsing placeholder cards instead of going blank under a "Loading…" title —
   clearer feedback and a steadier layout as results arrive.

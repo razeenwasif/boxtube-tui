@@ -68,6 +68,19 @@ def test_video_properties():
     assert v.views_str == "1.5K"
 
 
+def test_short_uses_vertical_thumbnail():
+    short = Video(id="abc", title="t", channel="c", duration=20, views=1, is_short=True)
+    assert short.thumbnail_url == "https://i.ytimg.com/vi/abc/oardefault.jpg"
+
+
+def test_channel_shorts_marks_is_short(monkeypatch):
+    monkeypatch.setattr(youtube, "find_ytdlp", lambda: "/usr/bin/yt-dlp")
+    line = json.dumps({"id": "s1", "ie_key": "Youtube", "title": "Short"})
+    monkeypatch.setattr(youtube.subprocess, "run", _fake_run_factory(line))
+    vids = youtube.channel_shorts("UCx", cookies="/ck")
+    assert vids and all(v.is_short for v in vids)
+
+
 # ----- find_ytdlp --------------------------------------------------------
 
 

@@ -30,6 +30,7 @@ class Video:
     duration: int | None
     views: int | None
     description: str = ""
+    is_short: bool = False
 
     @property
     def watch_url(self) -> str:
@@ -37,6 +38,9 @@ class Video:
 
     @property
     def thumbnail_url(self) -> str:
+        if self.is_short:
+            # Shorts have a true vertical (9:16) thumbnail (oardefault).
+            return f"https://i.ytimg.com/vi/{self.id}/oardefault.jpg"
         # mqdefault is a clean 320x180 16:9 frame (no letterboxing).
         return f"https://i.ytimg.com/vi/{self.id}/mqdefault.jpg"
 
@@ -284,9 +288,12 @@ def channel_shorts(channel_id: str, limit: int = SHORTS_PER_CHANNEL,
     """
     url = f"https://www.youtube.com/channel/{channel_id}/shorts"
     try:
-        return _dicts_to_videos(_entries(url, limit=limit, cookies=cookies))
+        videos = _dicts_to_videos(_entries(url, limit=limit, cookies=cookies))
     except SearchError:
         return []
+    for v in videos:
+        v.is_short = True
+    return videos
 
 
 def subscription_shorts(limit: int = 40, cookies: str | None = None) -> list[Video]:
@@ -340,7 +347,10 @@ def shorts_feed(limit: int = 40, cookies: str | None = None) -> list[Video]:
         if subs:
             return subs
     videos = _dicts_to_videos(_entries(HASHTAG_SHORTS, limit=limit, cookies=cookies))
-    return [v for v in videos if v.duration is None or v.duration <= SHORTS_MAX_SECONDS]
+    videos = [v for v in videos if v.duration is None or v.duration <= SHORTS_MAX_SECONDS]
+    for v in videos:
+        v.is_short = True
+    return videos
 
 
 def watch_history(limit: int = 40, cookies: str | None = None) -> list[Video]:

@@ -67,6 +67,20 @@ def test_duration_badge_paints_without_mutating_source():
     assert out.getpixel((230, 128)) != (20, 20, 20)
 
 
+def test_fetch_bounds_oversized_images(monkeypatch):
+    thumbnails.clear_cache()
+    buf = BytesIO()
+    PILImage.new("RGB", (720, 1280), (10, 10, 10)).save(buf, format="JPEG")
+    data = buf.getvalue()
+    monkeypatch.setattr(
+        thumbnails.urllib.request, "urlopen", lambda req, timeout=10: _Response(data)
+    )
+    img = thumbnails.fetch("vert", "https://example.test/v.jpg")
+    assert max(img.size) == 640  # capped to _MAX_CACHE_DIM
+    assert img.height > img.width  # vertical aspect preserved
+    thumbnails.clear_cache()
+
+
 def test_duration_badge_noop_for_unknown():
     src = PILImage.new("RGB", (240, 135), (20, 20, 20))
     assert thumbnails.with_duration_badge(src, "—") is src

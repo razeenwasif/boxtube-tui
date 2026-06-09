@@ -18,6 +18,10 @@ from PIL import ImageDraw, ImageFont
 _CACHE: OrderedDict[str, PILImage.Image] = OrderedDict()
 _PANEL = (24, 24, 30)  # matches the detail-pane background
 _DEFAULT_CACHE_SIZE = 64
+# Cap a cached image's largest side. Shorts use a 720x1280 vertical thumbnail;
+# bounding it keeps the cache small and rendering cheap (terminal cells are far
+# coarser than 1280px anyway).
+_MAX_CACHE_DIM = 640
 _FONT_CACHE: dict[int, ImageFont.FreeTypeFont | ImageFont.ImageFont] = {}
 
 
@@ -112,6 +116,12 @@ def fetch(video_id: str, url: str) -> PILImage.Image:
     image = PILImage.open(BytesIO(data))
     image.load()
     image = image.convert("RGB")
+    longest = max(image.size)
+    if longest > _MAX_CACHE_DIM:
+        scale = _MAX_CACHE_DIM / longest
+        image = image.resize(
+            (round(image.width * scale), round(image.height * scale)), PILImage.LANCZOS
+        )
     max_size = cache_size()
     if max_size == 0:
         return image

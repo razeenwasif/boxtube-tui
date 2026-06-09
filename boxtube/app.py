@@ -54,6 +54,8 @@ _AUTH_HINTS = ("does not exist", "sign in", "log in", "login", "private", "cooki
 
 # Grid sizing: target card width (cols) used to compute the column count.
 CARD_WIDTH = 24
+# Shorts are vertical, so their cards are narrower → more per row.
+SHORTS_CARD_WIDTH = 16
 GRID_GUTTER = 2
 
 
@@ -103,6 +105,8 @@ class VideoCard(Card):
 
     def compose(self) -> ComposeResult:
         v = self.video
+        if v.is_short:
+            self.add_class("-short")
         yield Image(thumbnails.placeholder(), classes="card-thumb")
         yield Label(v.title, classes="card-title")
         # Duration now rides as a badge on the thumbnail (YouTube-style), so the
@@ -221,6 +225,7 @@ class BoxTube(App[None]):
         self._thumb_timer = None
         self._skel_timer = None
         self._skel_pulse_on = False
+        self._grid_is_shorts = False
 
     # ----- layout --------------------------------------------------------
 
@@ -545,7 +550,8 @@ class BoxTube(App[None]):
 
     def _compute_cols(self) -> int:
         width = self.query_one("#grid").content_size.width or 70
-        return max(1, (width + GRID_GUTTER) // (CARD_WIDTH + GRID_GUTTER))
+        card_w = SHORTS_CARD_WIDTH if self._grid_is_shorts else CARD_WIDTH
+        return max(1, (width + GRID_GUTTER) // (card_w + GRID_GUTTER))
 
     def _show_skeletons(self, count: int = 12) -> None:
         """Fill the grid with placeholder cards while a feed loads (UI thread)."""
@@ -580,9 +586,13 @@ class BoxTube(App[None]):
         self._show_skeletons()
 
     def _populate_videos(self, videos: list[Video], title: str) -> None:
+        self._grid_is_shorts = bool(videos) and all(v.is_short for v in videos)
+        self.query_one("#grid-inner", Grid).set_class(self._grid_is_shorts, "-shorts")
         self._show_grid([VideoCard(v) for v in videos], title, video_feed=True)
 
     def _populate_playlists(self, playlists: list[Playlist], title: str) -> None:
+        self._grid_is_shorts = False
+        self.query_one("#grid-inner", Grid).set_class(False, "-shorts")
         self._show_grid([PlaylistCard(p) for p in playlists], title, video_feed=False)
 
     def _populate_channels(self, channels: list[Channel]) -> None:
