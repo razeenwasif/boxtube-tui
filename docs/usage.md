@@ -75,7 +75,9 @@ press `?` any time for them, and `r` to refresh once you've added cookies.
 
 - The **Subscriptions** group in the sidebar lists your subscribed channels.
   Click one (or focus the list and press **Enter**) to load that channel's
-  videos; **Backspace** goes back.
+  videos; **Backspace** goes back. A **Videos | Shorts** toggle appears above the
+  grid in channel view — switch to **Shorts** to browse that channel's Shorts
+  (shown as vertical cards).
 - The **filter chips** under the header run a search for that category (e.g.
   *Music*, *Gaming*). **All** returns to your Home feed. **Shorts** loads a feed
   of YouTube Shorts gathered from the **Shorts tabs of the channels you're

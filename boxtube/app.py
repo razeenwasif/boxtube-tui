@@ -183,6 +183,22 @@ class Chip(Static):
         self.post_message(self.Selected(self.label))
 
 
+class ChannelTab(Static):
+    """A Videos / Shorts toggle shown when drilled into a channel."""
+
+    class Selected(Message):
+        def __init__(self, tab: str) -> None:
+            super().__init__()
+            self.tab = tab
+
+    def __init__(self, tab: str, label: str) -> None:
+        super().__init__(label, classes="subtab")
+        self.tab = tab
+
+    def on_click(self) -> None:
+        self.post_message(self.Selected(self.tab))
+
+
 class BoxTube(App[None]):
     """The BoxTube application."""
 
@@ -226,6 +242,7 @@ class BoxTube(App[None]):
         self._skel_timer = None
         self._skel_pulse_on = False
         self._grid_is_shorts = False
+        self._channel_tab = "videos"
 
     # ----- layout --------------------------------------------------------
 
@@ -238,6 +255,9 @@ class BoxTube(App[None]):
         with HorizontalScroll(id="chips"):
             for label in CHIPS:
                 yield Chip(label)
+        with Horizontal(id="channel-tabs"):
+            yield ChannelTab("videos", "Videos")
+            yield ChannelTab("shorts", "Shorts")
         with Horizontal(id="body"):
             with VerticalScroll(id="sidebar"):
                 yield Static("You", classes="nav-section")
@@ -260,6 +280,7 @@ class BoxTube(App[None]):
         self._update_auth()
         self.query_one("#nav", ListView).index = 0
         self._set_active_chip("All")
+        self._set_channel_mode(False)
 
         if account.is_signed_in():
             self.load_channels()
@@ -288,6 +309,7 @@ class BoxTube(App[None]):
 
     def on_chip_selected(self, event: Chip.Selected) -> None:
         self._set_active_chip(event.label)
+        self._set_channel_mode(False)
         if event.label == "All":
             self._open_source("home")
         elif event.label == "Shorts":
@@ -309,6 +331,23 @@ class BoxTube(App[None]):
         for chip in self.query(Chip):
             chip.set_class(chip.label == label, "-active")
 
+    # ----- channel Videos / Shorts tabs ----------------------------------
+
+    def _set_channel_mode(self, on: bool) -> None:
+        """Show/hide the Videos|Shorts tab row (only meaningful in channel view)."""
+        self.query_one("#channel-tabs").display = on
+
+    def _set_active_subtab(self, tab: str) -> None:
+        for t in self.query(ChannelTab):
+            t.set_class(t.tab == tab, "-active")
+
+    def on_channel_tab_selected(self, event: ChannelTab.Selected) -> None:
+        if self._drill_channel is None or event.tab == self._channel_tab:
+            return
+        self._channel_tab = event.tab
+        self._set_active_subtab(event.tab)
+        self.load_channel(self._drill_channel)
+
     # ----- navigation ----------------------------------------------------
 
     def action_select_nav(self, index: int) -> None:
@@ -322,6 +361,7 @@ class BoxTube(App[None]):
         self._drill_channel = None
         self._last_query = None
         self._shorts_active = False
+        self._set_channel_mode(False)
         self._set_active_chip("All" if key == "home" else "")
         for i, (k, _, _) in enumerate(NAV_ITEMS):
             if k == key:
@@ -332,11 +372,15 @@ class BoxTube(App[None]):
     def _open_playlist(self, playlist: Playlist) -> None:
         self._drill_playlist = playlist
         self._drill_channel = None
+        self._set_channel_mode(False)
         self.load_playlist(playlist)
 
     def _open_channel(self, channel: Channel) -> None:
         self._drill_channel = channel
         self._drill_playlist = None
+        self._channel_tab = "videos"
+        self._set_channel_mode(True)
+        self._set_active_subtab("videos")
         self.load_channel(channel)
 
     def action_back(self) -> None:
@@ -421,16 +465,21 @@ class BoxTube(App[None]):
     @work(thread=True, exclusive=True, group="source")
     def load_channel(self, channel: Channel) -> None:
         cookies = account.cookies_arg()
+        tab = self._channel_tab
         self.call_from_thread(self._begin_load, f"Loading {channel.name}…")
         try:
-            videos = youtube.channel_videos(channel.id, cookies=cookies)
+            if tab == "shorts":
+                videos = youtube.channel_shorts(channel.id, limit=40, cookies=cookies)
+            else:
+                videos = youtube.channel_videos(channel.id, cookies=cookies)
         except SearchError as exc:
             self.call_from_thread(self._on_load_error, str(exc))
             return
         except Exception as exc:  # pragma: no cover - defensive
             self.call_from_thread(self._on_load_error, str(exc))
             return
-        self.call_from_thread(self._populate_videos, videos, channel.name)
+        label = "Shorts" if tab == "shorts" else "Videos"
+        self.call_from_thread(self._populate_videos, videos, f"{channel.name} — {label}")
 
     @work(thread=True, exclusive=True, group="channels")
     def load_channels(self) -> None:
@@ -543,6 +592,7 @@ class BoxTube(App[None]):
                 self._drill_channel = None
                 self._last_query = query
                 self._shorts_active = False
+                self._set_channel_mode(False)
                 self._set_active_chip("")
                 self.run_search(query)
 

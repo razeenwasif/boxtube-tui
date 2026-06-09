@@ -127,6 +127,36 @@ def test_channel_drilldown_and_back():
     run(go())
 
 
+def test_channel_tabs_toggle_videos_shorts(monkeypatch):
+    from boxtube.app import ChannelTab
+    from boxtube.youtube import Channel
+
+    loaded = {}
+    monkeypatch.setattr(BoxTube, "load_channel", lambda self, ch: loaded.setdefault("n", 0))
+
+    async def go():
+        app = BoxTube()
+        async with app.run_test() as pilot:
+            ch = Channel(id="UCabc", name="Some Channel")
+            app._open_channel(ch)
+            await pilot.pause()
+            # tabs become visible, Videos active by default
+            assert app.query_one("#channel-tabs").display is True
+            assert app._channel_tab == "videos"
+            # clicking Shorts switches the tab and reloads
+            app.on_channel_tab_selected(ChannelTab.Selected("shorts"))
+            await pilot.pause()
+            assert app._channel_tab == "shorts"
+            active = [t.tab for t in app.query(ChannelTab) if t.has_class("-active")]
+            assert active == ["shorts"]
+            # leaving the channel hides the tabs
+            app._open_source("home")
+            await pilot.pause()
+            assert app.query_one("#channel-tabs").display is False
+
+    run(go())
+
+
 def test_signed_out_prompts_sign_in():
     async def go():
         app = BoxTube()

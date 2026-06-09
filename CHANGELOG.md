@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Channel Videos / Shorts tabs**: drilling into a subscribed channel now shows a
+  Videos | Shorts toggle above the grid; switching to Shorts loads that channel's
+  Shorts tab and renders them as vertical cards.
 - **Vertical Shorts view**: the Shorts feed now renders as tall 9:16 cards using
   YouTube's vertical thumbnail, in a tighter grid of narrower columns, so it reads
   as Shorts rather than wide video cards. Cached thumbnails are bounded to 640px

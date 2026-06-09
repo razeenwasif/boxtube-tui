@@ -75,6 +75,32 @@ Screen {
     text-style: bold;
 }
 
+/* ----- channel Videos / Shorts tabs -------------------------------- */
+
+#channel-tabs {
+    height: 1;
+    background: #0f0f0f;
+    padding: 0 2;
+    display: none;
+}
+
+.subtab {
+    width: auto;
+    height: 1;
+    margin: 0 2 0 0;
+    padding: 0 1;
+    color: #aaaaaa;
+}
+
+.subtab:hover {
+    color: #f1f1f1;
+}
+
+.subtab.-active {
+    color: #ff6b6b;
+    text-style: bold;
+}
+
 /* ----- body -------------------------------------------------------- */
 
 #body {
