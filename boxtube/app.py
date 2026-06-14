@@ -17,10 +17,11 @@ from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Grid, Horizontal, HorizontalScroll, Vertical, VerticalScroll
 from textual.message import Message
+from textual.suggester import Suggester
 from textual.widgets import Footer, Input, Label, ListItem, ListView, Static
 from textual_image.widget import Image
 
-from . import account, config, opener, player, thumbnails, youtube
+from . import account, config, history, opener, player, thumbnails, youtube
 from .player_screen import PlayerScreen
 from .settings_screen import SettingsScreen
 from .youtube import Channel, Playlist, SearchError, Video
@@ -207,6 +208,27 @@ class ChannelTab(Static):
         self.post_message(self.Selected(self.tab))
 
 
+class HistorySuggester(Suggester):
+    """Completes the search box from your recent searches (most-recent first).
+
+    With the box empty it suggests your latest search; as you type it offers the
+    most recent query that starts with what you've typed. Press → (or End) to
+    accept the greyed-out completion.
+    """
+
+    def __init__(self) -> None:
+        # Don't cache: the history changes as you search, and lookups are cheap.
+        super().__init__(use_cache=False, case_sensitive=False)
+
+    async def get_suggestion(self, value: str) -> str | None:
+        # value is already casefolded (case_sensitive=False).
+        for query in history.recent():
+            low = query.casefold()
+            if low.startswith(value) and low != value:
+                return query
+        return None
+
+
 class BoxTube(App[None]):
     """The BoxTube application."""
 
@@ -263,7 +285,7 @@ class BoxTube(App[None]):
         with Horizontal(id="appbar"):
             yield Static("[#ff3b3b]▶[/]  [b]BoxTube[/b]", id="brand", markup=True)
             with Horizontal(id="search-wrap"):
-                yield Input(placeholder="Search", id="search")
+                yield Input(placeholder="Search", id="search", suggester=HistorySuggester())
             yield Static("", id="auth", markup=True)
             yield GearButton("⚙", id="gear")
         with HorizontalScroll(id="chips"):
@@ -601,6 +623,7 @@ class BoxTube(App[None]):
         if event.input.id == "search":
             query = event.value.strip()
             if query:
+                history.add(query)  # remember for future suggestions
                 self._current_source = None
                 self._drill_playlist = None
                 self._drill_channel = None

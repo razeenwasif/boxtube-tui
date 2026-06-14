@@ -75,6 +75,22 @@ def test_chip_search_runs_query(monkeypatch):
     run(go())
 
 
+def test_search_submit_records_history(monkeypatch):
+    from boxtube import history
+
+    monkeypatch.setattr(BoxTube, "run_search", lambda self, q: None)
+
+    async def go():
+        app = BoxTube()
+        async with app.run_test() as pilot:
+            search = app.query_one("#search", Input)
+            app.on_input_submitted(Input.Submitted(search, "guitar lessons"))
+            await pilot.pause()
+            assert "guitar lessons" in history.recent()
+
+    run(go())
+
+
 def test_chip_shorts_loads_shorts(monkeypatch):
     from boxtube.app import Chip
 

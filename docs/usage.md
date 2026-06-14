@@ -101,6 +101,12 @@ press `?` any time for them, and `r` to refresh once you've added cookies.
 1. Press `/` (or just type — it's focused when signed out).
 2. Enter a query and press **Enter**. Results replace the current tab's list.
 
+BoxTube remembers your searches and **suggests them inline**: with the box empty
+it ghosts your most recent query; as you type it completes to the most recent
+query that matches. Press **`→`** (or **`End`**) to accept the greyed-out
+suggestion, then **Enter** to run it. History is stored in `search_history.json`
+next to your config (override with `BOXTUBE_HISTORY`).
+
 ### Watch in the terminal
 
 1. Highlight a video and press **Enter** (or `p`).

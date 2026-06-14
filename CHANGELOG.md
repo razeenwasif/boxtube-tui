@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Search history + suggestions**: the search bar now remembers what you've
+  searched and completes it inline — leave the box empty for your latest search,
+  or start typing to get the most recent matching query as greyed-out ghost text;
+  press `→` (or `End`) to accept. History is de-duplicated, capped, and saved to
+  `search_history.json` next to the config (override with `BOXTUBE_HISTORY`). New
+  module `boxtube/history.py`.
 - **Resume / watch position**: BoxTube remembers how far you watched into each
   video and resumes from there when you reopen it (a brief `Resumed at M:SS`
   confirms; press `←` to restart). Positions in the first ~15 s aren't stored, and

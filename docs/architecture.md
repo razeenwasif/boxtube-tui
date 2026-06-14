@@ -39,14 +39,15 @@ persistent state beyond an in-memory thumbnail cache for the session.
 | `boxtube/engine.py` | Headless mpv A/V engine controlled over the JSON IPC socket | `MpvEngine` (`start`, `get`/`set`, `seek`, `screenshot`, `quit`) |
 | `boxtube/player_screen.py` | Custom player UI: frame pump + mouse-driven control bar; records/restores watch position | `PlayerScreen`, `ClickBar` |
 | `boxtube/progress.py` | Per-video resume positions, persisted as JSON | `record()`, `resume_at()`, `clear()`, `load()` |
+| `boxtube/history.py` | Recent search queries (inline suggestions), persisted as JSON | `add()`, `recent()`, `clear()` |
 | `boxtube/player.py` | mpv video-output / hwdec detection (used by the engine) | `detect_vo()`, `detect_hwdec()`, `mpv_path()` |
 | `boxtube/opener.py` | Open links in a browser (WSL-aware) | `open_url()`, `is_wsl()` |
 | `boxtube/boxtube.tcss` | Theme: colors, borders, layout | (Textual CSS) |
 | `boxtube/__main__.py` | `python -m boxtube` entry | delegates to `app.main` |
 
 The dependency direction is acyclic: `app` → {`youtube`, `account`, `thumbnails`,
-`player`}, `player_screen` → {`engine`, `youtube`, `progress`}, and `progress` →
-`config` (for the storage path). Nothing imports `app`.
+`player`, `history`}, `player_screen` → {`engine`, `youtube`, `progress`}, and
+`progress`/`history` → `config` (for the storage path). Nothing imports `app`.
 
 ## Navigation & data sources
 
@@ -120,7 +121,8 @@ out-of-order thumbnail loads (see below).
 
 ```
 User types query, presses Enter
-        │  Input.Submitted
+        │  Input.Submitted → history.add(query)   (HistorySuggester ghosts past
+        │                                          searches inline as you type)
         ▼
 BoxTube.run_search()           @work(thread=True, exclusive, group="search")
         │  (worker thread)

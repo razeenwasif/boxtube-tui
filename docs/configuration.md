@@ -48,6 +48,7 @@ playback_cookies = false
 | `BOXTUBE_AUDIO_BUFFER` | seconds (0.1–5.0) | `0.6` | mpv audio output buffer; larger absorbs CPU spikes that cause crackle/dropouts, at a little seek latency |
 | `BOXTUBE_AUDIO_DELAY` | seconds (−2.0–2.0) | `0.0` | Holds audio back to line up with the slightly-late sampled video; raise (e.g. 0.2) if audio runs ahead of the picture |
 | `BOXTUBE_PROGRESS` | Path | `<config dir>/watch_progress.json` | Where per-video resume positions are stored (see below) |
+| `BOXTUBE_HISTORY` | Path | `<config dir>/search_history.json` | Where recent search queries are stored for inline suggestions (see below) |
 | `XDG_CONFIG_HOME` | Path | `~/.config` | Base dir for the default cookies path |
 
 ### Sign-in / cookies (`BOXTUBE_COOKIES`)
@@ -199,6 +200,20 @@ elsewhere — or at a throwaway file to disable persistence between runs — wit
 
 ```bash
 BOXTUBE_PROGRESS=/tmp/boxtube-progress.json boxtube
+```
+
+### Search history (`BOXTUBE_HISTORY`)
+
+The search bar suggests your past searches inline: empty box → your latest query;
+typing → the most recent query that starts with what you've typed, shown as
+greyed-out ghost text. Press `→` (or `End`) to accept, then `Enter` to run it.
+Queries are de-duplicated (case-insensitive, most-recent first) and capped.
+
+History lives in `search_history.json` next to your config. Point it elsewhere —
+or at a throwaway file to keep searches out of the persistent history — with:
+
+```bash
+BOXTUBE_HISTORY=/tmp/boxtube-history.json boxtube
 ```
 
 ### Video output (`BOXTUBE_VO`)
