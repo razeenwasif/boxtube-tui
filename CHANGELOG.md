@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Resume / watch position**: BoxTube remembers how far you watched into each
+  video and resumes from there when you reopen it (a brief `Resumed at M:SS`
+  confirms; press `←` to restart). Positions in the first ~15 s aren't stored, and
+  a video watched to the end is forgotten so it begins fresh. Saved to
+  `watch_progress.json` next to the config (override with `BOXTUBE_PROGRESS`).
+  New module `boxtube/progress.py`.
 - **Settings screen + config file**: press **`,`** (or click the **⚙** in the
   header) to open an in-app Settings dialog for video resolution, frame width/rate,
   image backend, capture format, thumbnail cache, grid density, and playback

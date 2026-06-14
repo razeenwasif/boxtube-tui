@@ -37,14 +37,16 @@ persistent state beyond an in-memory thumbnail cache for the session.
 | `boxtube/account.py` | Sign-in state from a cookies file | `is_signed_in()`, `cookies_arg()`, `cookies_path()` |
 | `boxtube/thumbnails.py` | Download + cache thumbnails as PIL images | `fetch()`, `placeholder()` |
 | `boxtube/engine.py` | Headless mpv A/V engine controlled over the JSON IPC socket | `MpvEngine` (`start`, `get`/`set`, `seek`, `screenshot`, `quit`) |
-| `boxtube/player_screen.py` | Custom player UI: frame pump + mouse-driven control bar | `PlayerScreen`, `ClickBar` |
+| `boxtube/player_screen.py` | Custom player UI: frame pump + mouse-driven control bar; records/restores watch position | `PlayerScreen`, `ClickBar` |
+| `boxtube/progress.py` | Per-video resume positions, persisted as JSON | `record()`, `resume_at()`, `clear()`, `load()` |
 | `boxtube/player.py` | mpv video-output / hwdec detection (used by the engine) | `detect_vo()`, `detect_hwdec()`, `mpv_path()` |
 | `boxtube/opener.py` | Open links in a browser (WSL-aware) | `open_url()`, `is_wsl()` |
 | `boxtube/boxtube.tcss` | Theme: colors, borders, layout | (Textual CSS) |
 | `boxtube/__main__.py` | `python -m boxtube` entry | delegates to `app.main` |
 
 The dependency direction is acyclic: `app` → {`youtube`, `account`, `thumbnails`,
-`player`}, and `player` → `youtube` (for `find_ytdlp`). Nothing imports `app`.
+`player`}, `player_screen` → {`engine`, `youtube`, `progress`}, and `progress` →
+`config` (for the storage path). Nothing imports `app`.
 
 ## Navigation & data sources
 
@@ -189,6 +191,10 @@ PlayerScreen.on_mount
 - **Closing** awaits `pop_screen()` (an un-awaited pop stalls app shutdown) after
   the pump has wound down and mpv has quit. Avoid shadowing Textual
   `MessagePump` internals (e.g. `_closing`, `_running`) on the screen.
+- **Resume.** Once the stream loads, `_maybe_resume()` seeks to any saved position
+  from `progress.resume_at(video.id)`. The capture loop persists the position
+  every ~5 s (and on close / clip switch) via `progress.record(...)`; reaching EOF
+  calls `progress.clear(...)` so a finished video starts fresh next time.
 
 mpv resolves the YouTube stream through its bundled *ytdl hook*, pointed at the
 venv `yt-dlp` (`--script-opts=ytdl_hook-ytdl_path=…`) so playback never uses a

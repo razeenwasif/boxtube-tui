@@ -59,6 +59,8 @@ using your terminal's native graphics protocol when available. No API key requir
   (mpv runs headless as the A/V engine) with BoxTube's own mouse-driven control
   bar: play/pause, skip, a clickable seek bar, volume, and time. Renders via the
   kitty graphics protocol, sixel, or a unicode fallback.
+- **Resume where you left off** — reopen a video you didn't finish and it picks up
+  from your last position; finished videos start fresh next time.
 - **Inline thumbnails** — the highlighted video's thumbnail renders in the
   preview pane, scaling with the window while preserving its 16:9 ratio.
 - **Real YouTube data** — powered by `yt-dlp`; no Google API key required.

@@ -47,6 +47,7 @@ playback_cookies = false
 | `BOXTUBE_SCREENSHOT_QUALITY` | integer (1–100) | `92` | JPEG quality for captured frames (ignored for `png`) |
 | `BOXTUBE_AUDIO_BUFFER` | seconds (0.1–5.0) | `0.6` | mpv audio output buffer; larger absorbs CPU spikes that cause crackle/dropouts, at a little seek latency |
 | `BOXTUBE_AUDIO_DELAY` | seconds (−2.0–2.0) | `0.0` | Holds audio back to line up with the slightly-late sampled video; raise (e.g. 0.2) if audio runs ahead of the picture |
+| `BOXTUBE_PROGRESS` | Path | `<config dir>/watch_progress.json` | Where per-video resume positions are stored (see below) |
 | `XDG_CONFIG_HOME` | Path | `~/.config` | Base dir for the default cookies path |
 
 ### Sign-in / cookies (`BOXTUBE_COOKIES`)
@@ -183,6 +184,22 @@ Note: capture frame rate also affects sync — higher `BOXTUBE_PLAYER_FPS` shows
 fresher frames (less video lag) but costs more CPU. Since YouTube video is only
 ~24–30 fps, going above ~24 just duplicates frames and risks audio crackle; it
 will **not** give you 60 fps playback.
+
+### Resume / watch position (`BOXTUBE_PROGRESS`)
+
+BoxTube remembers how far you watched into each video and resumes from there the
+next time you open it (YouTube-style). When a saved clip reopens, it seeks to the
+last position and briefly notes `Resumed at M:SS`; press `←` to jump back if you
+want to rewatch from earlier. Positions in the first ~15 seconds aren't worth
+resuming and aren't stored, and a video watched to the end is forgotten so it
+starts fresh next time.
+
+Resume points live in `watch_progress.json` next to your config file. Point it
+elsewhere — or at a throwaway file to disable persistence between runs — with:
+
+```bash
+BOXTUBE_PROGRESS=/tmp/boxtube-progress.json boxtube
+```
 
 ### Video output (`BOXTUBE_VO`)
 

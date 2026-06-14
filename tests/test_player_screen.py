@@ -83,8 +83,11 @@ def test_clickbar_fraction_clamps():
 
 
 @pytest.fixture(autouse=True)
-def _fake_engine(monkeypatch):
+def _fake_engine(monkeypatch, tmp_path):
     monkeypatch.setattr(player_screen, "MpvEngine", FakeEngine)
+    # Isolate the resume store so the player's progress writes don't touch the
+    # real ~/.config/boxtube file during tests.
+    monkeypatch.setenv("BOXTUBE_PROGRESS", str(tmp_path / "progress.json"))
     # Keep the host app offline so its startup feed-load doesn't hit the network
     # (which would otherwise stall app shutdown at the end of the test).
     monkeypatch.setattr("boxtube.account.is_signed_in", lambda: False)
@@ -202,6 +205,22 @@ def test_no_autoplay_closes_on_eof():
                 if not isinstance(app.screen, PlayerScreen):
                     break
             assert not isinstance(app.screen, PlayerScreen)
+
+    run(go())
+
+
+def test_resume_seeks_to_saved_position():
+    from boxtube import progress
+
+    async def go():
+        progress.record("res", 50.0, 100.0, "Resumable")  # left off at 0:50
+        app = BoxTube()
+        async with app.run_test():
+            scr = await _open_player(
+                app, Video(id="res", title="Resumable", channel="c", duration=100, views=1)
+            )
+            assert ("seek", 50.0) in scr.engine.calls  # absolute seek to resume point
+            await scr.action_close()
 
     run(go())
 

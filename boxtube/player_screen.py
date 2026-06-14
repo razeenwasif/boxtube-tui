@@ -28,6 +28,7 @@ from textual_image.widget import (
 )
 from textual_image.widget import Image as AutoResolvedImage
 
+from . import progress
 from .engine import EngineError, MpvEngine
 from .youtube import Video, human_duration
 
@@ -262,6 +263,7 @@ class PlayerScreen(Screen):
         self._duration = float(self.engine.get("duration") or 0)
         self._set_title()
         self.query_one("#pl-pause", Button).label = "⏸"
+        self._maybe_resume()
         self._recompute_target()
         # Capture runs on a daemon thread; the UI renders the latest frame on a
         # steady Textual timer so cadence is even and slow frames are dropped.
@@ -296,6 +298,7 @@ class PlayerScreen(Screen):
         period = 1.0 / self._fps
         tick = 0
         vol = None
+        last_save = 0.0
         while not self._stop and self.engine and self.engine.is_alive():
             t0 = time.time()
             paused = False
@@ -312,6 +315,10 @@ class PlayerScreen(Screen):
                 }
             except Exception:
                 pass
+            # Persist the resume point now and then while actually playing.
+            if not paused and self._duration > 0 and t0 - last_save >= 5.0:
+                self._save_progress()
+                last_save = t0
             # A paused frame never changes — skip the screenshot + re-render.
             if not paused:
                 try:
@@ -376,12 +383,44 @@ class PlayerScreen(Screen):
         except Exception:
             pass
 
+    # ----- watch progress (resume) --------------------------------------
+
+    def _maybe_resume(self) -> None:
+        """Seek to the saved resume point for this video, if there is one."""
+        try:
+            pos = progress.resume_at(self.video.id)
+        except Exception:
+            pos = None
+        if pos and self.engine and pos < self._duration:
+            self.engine.seek(pos, "absolute")
+            self.notify(f"Resumed at {human_duration(int(pos))}", timeout=4)
+
+    def _save_progress(self) -> None:
+        """Persist the current position for the playing video (best effort)."""
+        if self._duration <= 0:
+            return
+        tp = (self._props or {}).get("time-pos")
+        if tp is None:
+            return
+        try:
+            progress.record(self.video.id, float(tp), self._duration, self.video.title)
+        except Exception:
+            pass
+
+    def _mark_finished(self) -> None:
+        """Forget the resume point once a clip is watched to the end."""
+        try:
+            progress.clear(self.video.id)
+        except Exception:
+            pass
+
     # ----- playlist navigation ------------------------------------------
 
     def _on_playback_ended(self) -> None:
         """Called on natural EOF. Auto-advance when enabled, else close."""
         if self._close_started:
             return
+        self._mark_finished()
         if self.autoplay and self.index + 1 < len(self.playlist):
             self._go(1)
         else:
@@ -404,6 +443,7 @@ class PlayerScreen(Screen):
         """Tear down the current clip and start the next one without leaving."""
         if self._close_started:
             return
+        self._save_progress()  # remember where we left the outgoing clip
         self._switching = True
         self._stop = True
         # Let the capture pump observe _stop and finish its current iteration.
@@ -462,6 +502,7 @@ class PlayerScreen(Screen):
         if self._close_started:
             return
         self._close_started = True
+        self._save_progress()  # remember where we stopped watching
         self._stop = True
         # Let the frame pump observe _stop and finish its current iteration
         # before we pop, so it isn't mid-call_from_thread during teardown.
