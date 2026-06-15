@@ -22,6 +22,7 @@ from textual.widgets import Footer, Input, Label, ListItem, ListView, Static
 from textual_image.widget import Image
 
 from . import account, config, history, opener, player, thumbnails, youtube
+from .comments_screen import CommentsScreen
 from .player_screen import PlayerScreen
 from .settings_screen import SettingsScreen
 from .youtube import Channel, Playlist, SearchError, Video
@@ -241,6 +242,7 @@ class BoxTube(App[None]):
         Binding("enter", "play", "Play", show=True),
         Binding("p", "play", "Play", show=False),
         Binding("o", "open_browser", "Open", show=True),
+        Binding("c", "comments", "Comments", show=True),
         Binding("r", "refresh", "Refresh", show=True),
         Binding("question_mark", "help", "Sign in", show=True),
         Binding("comma", "settings", "Settings", show=True),
@@ -824,6 +826,13 @@ class BoxTube(App[None]):
             self.notify(f"Opened {item.watch_url}")
         else:
             self.notify("Couldn't find a browser to open the link.", severity="error")
+
+    def action_comments(self) -> None:
+        item = self._focused_item
+        if not isinstance(item, Video):
+            self.notify("Highlight a video first.", severity="warning")
+            return
+        self.push_screen(CommentsScreen(item))
 
     def action_refresh(self) -> None:
         self._update_auth()

@@ -82,6 +82,22 @@ class Channel:
         return f"https://www.youtube.com/channel/{self.id}/videos"
 
 
+@dataclass
+class Comment:
+    """A single video comment."""
+
+    author: str
+    text: str
+    likes: int | None = None
+    is_uploader: bool = False  # author is the video's channel
+    is_favorited: bool = False  # hearted by the creator
+    time_text: str = ""  # e.g. "1 year ago"
+
+    @property
+    def likes_str(self) -> str:
+        return human_number(self.likes) if self.likes else ""
+
+
 # Authenticated feed targets (all require a cookies file).
 FEED_SUBSCRIPTIONS = "https://www.youtube.com/feed/subscriptions"
 FEED_HISTORY = "https://www.youtube.com/feed/history"
@@ -103,6 +119,11 @@ SHORTS_MAX_SECONDS = 180
 # channels, pulling a few Shorts from each, fetched concurrently.
 SHORTS_MAX_CHANNELS = 30
 SHORTS_PER_CHANNEL = 5
+
+# Comment extraction is heavy (it loads the full watch page), so cap how many we
+# pull and default to YouTube's "Top comments" ordering.
+COMMENTS_MAX = 40
+COMMENTS_SORT = "top"
 
 
 def human_number(n: int | None) -> str:
@@ -248,6 +269,27 @@ def _dicts_to_videos(dicts: list[dict]) -> list[Video]:
             )
         )
     return videos
+
+
+def _dicts_to_comments(dicts: list[dict], limit: int) -> list[Comment]:
+    out: list[Comment] = []
+    for d in dicts:
+        text = (d.get("text") or "").replace("\r\n", "\n").replace("\r", "\n").strip()
+        if not text:
+            continue
+        out.append(
+            Comment(
+                author=d.get("author") or "Anonymous",
+                text=text,
+                likes=d.get("like_count"),
+                is_uploader=bool(d.get("author_is_uploader")),
+                is_favorited=bool(d.get("is_favorited")),
+                time_text=d.get("_time_text") or "",
+            )
+        )
+        if len(out) >= limit:
+            break
+    return out
 
 
 def _dicts_to_playlists(dicts: list[dict]) -> list[Playlist]:
@@ -397,6 +439,51 @@ def subscribed_channels(limit: int = 50, cookies: str | None = None) -> list[Cha
 def channel_videos(channel_id: str, limit: int = 40, cookies: str | None = None) -> list[Video]:
     url = f"https://www.youtube.com/channel/{channel_id}/videos"
     return _dicts_to_videos(_entries(url, limit=limit, cookies=cookies))
+
+
+def fetch_comments(video_id: str, limit: int = COMMENTS_MAX,
+                   cookies: str | None = None, sort: str = COMMENTS_SORT) -> list[Comment]:
+    """Fetch a video's top-level comments via yt-dlp.
+
+    This is *slow* relative to the flat feed loaders — yt-dlp has to extract the
+    full watch page — so it's run from a background worker and the count is
+    capped. Replies are not fetched (we show a flat top-level list). Returns an
+    empty list when comments are disabled/unavailable; raises ``SearchError`` on
+    an extraction failure.
+    """
+    if not video_id:
+        return []
+    sort = "new" if str(sort).lower() == "new" else "top"
+    url = f"https://www.youtube.com/watch?v={video_id}"
+    cmd = [ytdlp_path()]
+    if cookies:
+        cmd += ["--cookies", cookies]
+    # max_comments = total[,max_parents[,max_replies[,max_replies_per_thread]]].
+    # "all" parents, 0 replies → a flat list of up to `limit` top-level comments.
+    extractor_args = f"youtube:comment_sort={sort};max_comments={limit},all,0,0"
+    cmd += [
+        url,
+        "--dump-single-json",
+        "--write-comments",
+        "--no-warnings",
+        "--ignore-no-formats-error",
+        "--extractor-args",
+        extractor_args,
+    ]
+    js = find_js_runtime()
+    if js:
+        cmd += ["--js-runtimes", js]
+
+    proc = subprocess.run(cmd, capture_output=True, text=True)
+    out = proc.stdout.strip()
+    if not out:
+        raise SearchError(_clean_error(proc.stderr) if proc.stderr.strip()
+                          else "Couldn't load comments.")
+    try:
+        info = json.loads(out)
+    except json.JSONDecodeError:
+        raise SearchError("Couldn't parse comments.")
+    return _dicts_to_comments(info.get("comments") or [], limit)
 
 
 def videos_for_feed(key: str, *, limit: int, cookies: str | None) -> list[Video]:

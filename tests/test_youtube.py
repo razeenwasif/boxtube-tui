@@ -354,6 +354,76 @@ def test_feed_separates_videos_from_playlists(monkeypatch):
     assert [v.id for v in videos] == ["vvvvvvvvvvv"]
 
 
+# ----- comments (mocked subprocess) --------------------------------------
+
+
+def test_fetch_comments_parses(monkeypatch):
+    monkeypatch.setattr(youtube, "find_ytdlp", lambda: "/usr/bin/yt-dlp")
+    monkeypatch.setattr(youtube, "find_js_runtime", lambda: None)
+    info = {
+        "comments": [
+            {"author": "@alice", "text": "great video", "like_count": 1200,
+             "author_is_uploader": False, "is_favorited": True,
+             "_time_text": "2 days ago", "parent": "root"},
+            {"author": "@maker", "text": "thanks!", "like_count": None,
+             "author_is_uploader": True, "parent": "root"},
+            {"author": "@blank", "text": "   ", "parent": "root"},  # empty → skipped
+        ]
+    }
+    monkeypatch.setattr(youtube.subprocess, "run", _fake_run_factory(json.dumps(info)))
+    comments = youtube.fetch_comments("vid123")
+    assert [c.author for c in comments] == ["@alice", "@maker"]
+    assert comments[0].likes == 1200 and comments[0].is_favorited
+    assert comments[0].likes_str == "1.2K"
+    assert comments[1].is_uploader and comments[1].likes_str == ""
+
+
+def test_fetch_comments_builds_command(monkeypatch):
+    monkeypatch.setattr(youtube, "find_ytdlp", lambda: "/usr/bin/yt-dlp")
+    monkeypatch.setattr(youtube, "find_js_runtime", lambda: "bun")
+    captured = {}
+
+    def _capture(cmd, capture_output=True, text=True):
+        captured["cmd"] = cmd
+        return SimpleNamespace(stdout='{"comments": []}', stderr="", returncode=0)
+
+    monkeypatch.setattr(youtube.subprocess, "run", _capture)
+    youtube.fetch_comments("abc", limit=10, sort="new")
+    cmd = captured["cmd"]
+    assert "https://www.youtube.com/watch?v=abc" in cmd
+    assert "--write-comments" in cmd and "--dump-single-json" in cmd
+    assert "--js-runtimes" in cmd and "bun" in cmd
+    ea = cmd[cmd.index("--extractor-args") + 1]
+    assert "comment_sort=new" in ea and "max_comments=10" in ea
+
+
+def test_fetch_comments_empty_id_skips_subprocess(monkeypatch):
+    monkeypatch.setattr(
+        youtube, "find_ytdlp", lambda: (_ for _ in ()).throw(AssertionError("called"))
+    )
+    assert youtube.fetch_comments("") == []
+
+
+def test_fetch_comments_no_output_raises(monkeypatch):
+    monkeypatch.setattr(youtube, "find_ytdlp", lambda: "/usr/bin/yt-dlp")
+    monkeypatch.setattr(youtube, "find_js_runtime", lambda: None)
+    monkeypatch.setattr(
+        youtube.subprocess, "run", _fake_run_factory("", stderr="ERROR: nope", returncode=1)
+    )
+    with pytest.raises(SearchError):
+        youtube.fetch_comments("abc")
+
+
+def test_fetch_comments_disabled_returns_empty(monkeypatch):
+    # Comments turned off for a video → info json has no 'comments' key.
+    monkeypatch.setattr(youtube, "find_ytdlp", lambda: "/usr/bin/yt-dlp")
+    monkeypatch.setattr(youtube, "find_js_runtime", lambda: None)
+    monkeypatch.setattr(
+        youtube.subprocess, "run", _fake_run_factory('{"id": "abc", "title": "t"}')
+    )
+    assert youtube.fetch_comments("abc") == []
+
+
 # ----- network (manual) --------------------------------------------------
 
 

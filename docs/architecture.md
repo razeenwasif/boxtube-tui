@@ -33,13 +33,14 @@ persistent state beyond an in-memory thumbnail cache for the session.
 | Module | Responsibility | Key surface |
 |--------|----------------|-------------|
 | `boxtube/app.py` | Textual UI, layout, nav, events, orchestration | `BoxTube(App)`, `VideoCard`/`PlaylistCard`/`NavItem`/`ChannelItem`/`Chip`, `main()` |
-| `boxtube/youtube.py` | Search & personalized feeds via `yt-dlp`; binary discovery; models & formatting | `search()`, `videos_for_feed()`, `user_playlists()`, `Video`, `Playlist`, `find_ytdlp()` |
+| `boxtube/youtube.py` | Search & personalized feeds via `yt-dlp`; binary discovery; models & formatting | `search()`, `videos_for_feed()`, `user_playlists()`, `fetch_comments()`, `Video`, `Playlist`, `Comment`, `find_ytdlp()` |
 | `boxtube/account.py` | Sign-in state from a cookies file | `is_signed_in()`, `cookies_arg()`, `cookies_path()` |
 | `boxtube/thumbnails.py` | Download + cache thumbnails as PIL images | `fetch()`, `placeholder()` |
 | `boxtube/engine.py` | Headless mpv A/V engine controlled over the JSON IPC socket | `MpvEngine` (`start`, `get`/`set`, `seek`, `screenshot`, `quit`) |
 | `boxtube/player_screen.py` | Custom player UI: frame pump + mouse-driven control bar; records/restores watch position | `PlayerScreen`, `ClickBar` |
 | `boxtube/progress.py` | Per-video resume positions, persisted as JSON | `record()`, `resume_at()`, `clear()`, `load()` |
 | `boxtube/history.py` | Recent search queries (inline suggestions), persisted as JSON | `add()`, `recent()`, `clear()` |
+| `boxtube/comments_screen.py` | Modal comments panel; loads a video's comments in a worker | `CommentsScreen`, `CommentRow` |
 | `boxtube/player.py` | mpv video-output / hwdec detection (used by the engine) | `detect_vo()`, `detect_hwdec()`, `mpv_path()` |
 | `boxtube/opener.py` | Open links in a browser (WSL-aware) | `open_url()`, `is_wsl()` |
 | `boxtube/boxtube.tcss` | Theme: colors, borders, layout | (Textual CSS) |
@@ -201,6 +202,18 @@ PlayerScreen.on_mount
 mpv resolves the YouTube stream through its bundled *ytdl hook*, pointed at the
 venv `yt-dlp` (`--script-opts=ytdl_hook-ytdl_path=…`) so playback never uses a
 stale system binary.
+
+### Comments
+
+`c` on a highlighted video → `push_screen(CommentsScreen(video))`. The modal opens
+immediately with a *Loading…* line; a `@work(thread=True)` worker runs
+`youtube.fetch_comments(id)` — a single `yt-dlp --dump-single-json
+--write-comments` extraction with `--extractor-args
+youtube:comment_sort=top;max_comments=N,all,0,0` (a flat top-level list, no reply
+threads) — then marshals the parsed `Comment`s back with
+`self.app.call_from_thread` (a `Screen` has no `call_from_thread` of its own). It's
+the heaviest single yt-dlp call in the app (full watch-page extraction), which is
+why it's on demand and capped rather than prefetched.
 
 ## Threading model
 

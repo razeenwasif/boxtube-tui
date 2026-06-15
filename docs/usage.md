@@ -56,6 +56,7 @@ the [accounts guide](accounts.md) to enable personalized tabs.
 | `1`–`5` | Jump to a Library tab (Home, History, Liked, Watch Later, Playlists) |
 | `p` | Play the highlighted video |
 | `o` | Open the highlighted video in your web browser |
+| `c` | Show comments for the highlighted video |
 | `r` | Refresh the current tab (also re-checks sign-in) |
 | `Backspace` | Go back from a playlist to the playlist list |
 | `?` | Show sign-in steps |
@@ -142,6 +143,17 @@ on a steady timer (`BOXTUBE_PLAYER_FPS`) with your terminal's graphics protocol
 [configuration → video output](configuration.md#video-output-boxtube_vo).
 Age-restricted videos play without sign-in; for private/members-only videos see
 [`BOXTUBE_PLAYBACK_COOKIES`](configuration.md#playback-cookies-boxtube_playback_cookies).
+
+### Read comments
+
+Highlight a video and press **`c`** to open its **comments** in a pop-up panel —
+a flat list of the top comments (author, when, likes, and a *creator* tag on the
+uploader's own comments), ordered like YouTube's "Top comments". The panel scrolls
+with the mouse or arrow keys; press `Esc` / `q` / `c` to close.
+
+Comments are fetched on demand via `yt-dlp`, which loads the full watch page, so
+the panel shows *Loading comments…* for a moment before they appear. Videos with
+comments turned off show a short note instead.
 
 ### Open in a browser
 

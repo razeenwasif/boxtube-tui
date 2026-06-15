@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Comments panel**: press **`c`** on a highlighted video to open a pop-up of its
+  top comments — author, when, like count, and a *creator* tag on the uploader's
+  own comments — ordered like YouTube's "Top comments". Comments are fetched on
+  demand via `yt-dlp` (`youtube.fetch_comments`) in a background worker, so the
+  panel shows a brief loading state first. New modules
+  `boxtube/comments_screen.py` and the `Comment` model.
 - **Search history + suggestions**: the search bar now remembers what you've
   searched and completes it inline — leave the box empty for your latest search,
   or start typing to get the most recent matching query as greyed-out ghost text;
